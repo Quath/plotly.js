@@ -199,7 +199,7 @@ module.exports = {
 
 module.exports = require('../src/traces/choropleth');
 
-},{"../src/traces/choropleth":171}],4:[function(require,module,exports){
+},{"../src/traces/choropleth":172}],4:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -241,400 +241,7 @@ module.exports = Plotly;
 
 module.exports = require('../src/traces/scattergeo');
 
-},{"../src/traces/scattergeo":201}],7:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-function EventEmitter() {
-  this._events = this._events || {};
-  this._maxListeners = this._maxListeners || undefined;
-}
-module.exports = EventEmitter;
-
-// Backwards-compat with node 0.10.x
-EventEmitter.EventEmitter = EventEmitter;
-
-EventEmitter.prototype._events = undefined;
-EventEmitter.prototype._maxListeners = undefined;
-
-// By default EventEmitters will print a warning if more than 10 listeners are
-// added to it. This is a useful default which helps finding memory leaks.
-EventEmitter.defaultMaxListeners = 10;
-
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-EventEmitter.prototype.setMaxListeners = function(n) {
-  if (!isNumber(n) || n < 0 || isNaN(n))
-    throw TypeError('n must be a positive number');
-  this._maxListeners = n;
-  return this;
-};
-
-EventEmitter.prototype.emit = function(type) {
-  var er, handler, len, args, i, listeners;
-
-  if (!this._events)
-    this._events = {};
-
-  // If there is no 'error' event listener then throw.
-  if (type === 'error') {
-    if (!this._events.error ||
-        (isObject(this._events.error) && !this._events.error.length)) {
-      er = arguments[1];
-      if (er instanceof Error) {
-        throw er; // Unhandled 'error' event
-      }
-      throw TypeError('Uncaught, unspecified "error" event.');
-    }
-  }
-
-  handler = this._events[type];
-
-  if (isUndefined(handler))
-    return false;
-
-  if (isFunction(handler)) {
-    switch (arguments.length) {
-      // fast cases
-      case 1:
-        handler.call(this);
-        break;
-      case 2:
-        handler.call(this, arguments[1]);
-        break;
-      case 3:
-        handler.call(this, arguments[1], arguments[2]);
-        break;
-      // slower
-      default:
-        args = Array.prototype.slice.call(arguments, 1);
-        handler.apply(this, args);
-    }
-  } else if (isObject(handler)) {
-    args = Array.prototype.slice.call(arguments, 1);
-    listeners = handler.slice();
-    len = listeners.length;
-    for (i = 0; i < len; i++)
-      listeners[i].apply(this, args);
-  }
-
-  return true;
-};
-
-EventEmitter.prototype.addListener = function(type, listener) {
-  var m;
-
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  if (!this._events)
-    this._events = {};
-
-  // To avoid recursion in the case that type === "newListener"! Before
-  // adding it to the listeners, first emit "newListener".
-  if (this._events.newListener)
-    this.emit('newListener', type,
-              isFunction(listener.listener) ?
-              listener.listener : listener);
-
-  if (!this._events[type])
-    // Optimize the case of one listener. Don't need the extra array object.
-    this._events[type] = listener;
-  else if (isObject(this._events[type]))
-    // If we've already got an array, just append.
-    this._events[type].push(listener);
-  else
-    // Adding the second element, need to change to array.
-    this._events[type] = [this._events[type], listener];
-
-  // Check for listener leak
-  if (isObject(this._events[type]) && !this._events[type].warned) {
-    if (!isUndefined(this._maxListeners)) {
-      m = this._maxListeners;
-    } else {
-      m = EventEmitter.defaultMaxListeners;
-    }
-
-    if (m && m > 0 && this._events[type].length > m) {
-      this._events[type].warned = true;
-      console.error('(node) warning: possible EventEmitter memory ' +
-                    'leak detected. %d listeners added. ' +
-                    'Use emitter.setMaxListeners() to increase limit.',
-                    this._events[type].length);
-      if (typeof console.trace === 'function') {
-        // not supported in IE 10
-        console.trace();
-      }
-    }
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.once = function(type, listener) {
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  var fired = false;
-
-  function g() {
-    this.removeListener(type, g);
-
-    if (!fired) {
-      fired = true;
-      listener.apply(this, arguments);
-    }
-  }
-
-  g.listener = listener;
-  this.on(type, g);
-
-  return this;
-};
-
-// emits a 'removeListener' event iff the listener was removed
-EventEmitter.prototype.removeListener = function(type, listener) {
-  var list, position, length, i;
-
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  if (!this._events || !this._events[type])
-    return this;
-
-  list = this._events[type];
-  length = list.length;
-  position = -1;
-
-  if (list === listener ||
-      (isFunction(list.listener) && list.listener === listener)) {
-    delete this._events[type];
-    if (this._events.removeListener)
-      this.emit('removeListener', type, listener);
-
-  } else if (isObject(list)) {
-    for (i = length; i-- > 0;) {
-      if (list[i] === listener ||
-          (list[i].listener && list[i].listener === listener)) {
-        position = i;
-        break;
-      }
-    }
-
-    if (position < 0)
-      return this;
-
-    if (list.length === 1) {
-      list.length = 0;
-      delete this._events[type];
-    } else {
-      list.splice(position, 1);
-    }
-
-    if (this._events.removeListener)
-      this.emit('removeListener', type, listener);
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.removeAllListeners = function(type) {
-  var key, listeners;
-
-  if (!this._events)
-    return this;
-
-  // not listening for removeListener, no need to emit
-  if (!this._events.removeListener) {
-    if (arguments.length === 0)
-      this._events = {};
-    else if (this._events[type])
-      delete this._events[type];
-    return this;
-  }
-
-  // emit removeListener for all listeners on all events
-  if (arguments.length === 0) {
-    for (key in this._events) {
-      if (key === 'removeListener') continue;
-      this.removeAllListeners(key);
-    }
-    this.removeAllListeners('removeListener');
-    this._events = {};
-    return this;
-  }
-
-  listeners = this._events[type];
-
-  if (isFunction(listeners)) {
-    this.removeListener(type, listeners);
-  } else if (listeners) {
-    // LIFO order
-    while (listeners.length)
-      this.removeListener(type, listeners[listeners.length - 1]);
-  }
-  delete this._events[type];
-
-  return this;
-};
-
-EventEmitter.prototype.listeners = function(type) {
-  var ret;
-  if (!this._events || !this._events[type])
-    ret = [];
-  else if (isFunction(this._events[type]))
-    ret = [this._events[type]];
-  else
-    ret = this._events[type].slice();
-  return ret;
-};
-
-EventEmitter.prototype.listenerCount = function(type) {
-  if (this._events) {
-    var evlistener = this._events[type];
-
-    if (isFunction(evlistener))
-      return 1;
-    else if (evlistener)
-      return evlistener.length;
-  }
-  return 0;
-};
-
-EventEmitter.listenerCount = function(emitter, type) {
-  return emitter.listenerCount(type);
-};
-
-function isFunction(arg) {
-  return typeof arg === 'function';
-}
-
-function isNumber(arg) {
-  return typeof arg === 'number';
-}
-
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
-}
-
-function isUndefined(arg) {
-  return arg === void 0;
-}
-
-},{}],8:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = setTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    clearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        setTimeout(drainQueue, 0);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],9:[function(require,module,exports){
+},{"../src/traces/scattergeo":203}],7:[function(require,module,exports){
 module.exports = {
   AFG: "afghan",
   ALA: "\\b\\wland",
@@ -893,10 +500,10 @@ module.exports = {
   ZWE: "zimbabwe|^(?!.*northern).*rhodesia"
 };
 
-},{}],10:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 !function() {
   var d3 = {
-    version: "3.5.16"
+    version: "3.5.17"
   };
   var d3_arraySlice = [].slice, d3_array = function(list) {
     return d3_arraySlice.call(list);
@@ -4421,7 +4028,7 @@ module.exports = {
         λ0 = λ, sinφ0 = sinφ, cosφ0 = cosφ, point0 = point;
       }
     }
-    return (polarAngle < -ε || polarAngle < ε && d3_geo_areaRingSum < 0) ^ winding & 1;
+    return (polarAngle < -ε || polarAngle < ε && d3_geo_areaRingSum < -ε) ^ winding & 1;
   }
   function d3_geo_clipCircle(radius) {
     var cr = Math.cos(radius), smallRadius = cr > 0, notHemisphere = abs(cr) > ε, interpolate = d3_geo_circleInterpolate(radius, 6 * d3_radians);
@@ -10448,14 +10055,14 @@ module.exports = {
   });
   if (typeof define === "function" && define.amd) this.d3 = d3, define(d3); else if (typeof module === "object" && module.exports) module.exports = d3; else this.d3 = d3;
 }();
-},{}],11:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 (function (process,global){
 /*!
  * @overview es6-promise - a tiny implementation of Promises/A+.
  * @copyright Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors (Conversion to ES6 API by Jake Archibald)
  * @license   Licensed under MIT license
  *            See https://raw.githubusercontent.com/jakearchibald/es6-promise/master/LICENSE
- * @version   3.1.2
+ * @version   3.2.1
  */
 
 (function() {
@@ -10513,7 +10120,7 @@ module.exports = {
     var lib$es6$promise$asap$$browserWindow = (typeof window !== 'undefined') ? window : undefined;
     var lib$es6$promise$asap$$browserGlobal = lib$es6$promise$asap$$browserWindow || {};
     var lib$es6$promise$asap$$BrowserMutationObserver = lib$es6$promise$asap$$browserGlobal.MutationObserver || lib$es6$promise$asap$$browserGlobal.WebKitMutationObserver;
-    var lib$es6$promise$asap$$isNode = typeof process !== 'undefined' && {}.toString.call(process) === '[object process]';
+    var lib$es6$promise$asap$$isNode = typeof self === 'undefined' && typeof process !== 'undefined' && {}.toString.call(process) === '[object process]';
 
     // test for web worker but not in IE10
     var lib$es6$promise$asap$$isWorker = typeof Uint8ClampedArray !== 'undefined' &&
@@ -10603,19 +10210,19 @@ module.exports = {
     }
     function lib$es6$promise$then$$then(onFulfillment, onRejection) {
       var parent = this;
-      var state = parent._state;
-
-      if (state === lib$es6$promise$$internal$$FULFILLED && !onFulfillment || state === lib$es6$promise$$internal$$REJECTED && !onRejection) {
-        return this;
-      }
 
       var child = new this.constructor(lib$es6$promise$$internal$$noop);
-      var result = parent._result;
+
+      if (child[lib$es6$promise$$internal$$PROMISE_ID] === undefined) {
+        lib$es6$promise$$internal$$makePromise(child);
+      }
+
+      var state = parent._state;
 
       if (state) {
         var callback = arguments[state - 1];
         lib$es6$promise$asap$$asap(function(){
-          lib$es6$promise$$internal$$invokeCallback(state, child, callback, result);
+          lib$es6$promise$$internal$$invokeCallback(state, child, callback, parent._result);
         });
       } else {
         lib$es6$promise$$internal$$subscribe(parent, child, onFulfillment, onRejection);
@@ -10637,6 +10244,7 @@ module.exports = {
       return promise;
     }
     var lib$es6$promise$promise$resolve$$default = lib$es6$promise$promise$resolve$$resolve;
+    var lib$es6$promise$$internal$$PROMISE_ID = Math.random().toString(36).substring(16);
 
     function lib$es6$promise$$internal$$noop() {}
 
@@ -10867,6 +10475,18 @@ module.exports = {
       }
     }
 
+    var lib$es6$promise$$internal$$id = 0;
+    function lib$es6$promise$$internal$$nextId() {
+      return lib$es6$promise$$internal$$id++;
+    }
+
+    function lib$es6$promise$$internal$$makePromise(promise) {
+      promise[lib$es6$promise$$internal$$PROMISE_ID] = lib$es6$promise$$internal$$id++;
+      promise._state = undefined;
+      promise._result = undefined;
+      promise._subscribers = [];
+    }
+
     function lib$es6$promise$promise$all$$all(entries) {
       return new lib$es6$promise$enumerator$$default(this, entries).promise;
     }
@@ -10875,28 +10495,18 @@ module.exports = {
       /*jshint validthis:true */
       var Constructor = this;
 
-      var promise = new Constructor(lib$es6$promise$$internal$$noop);
-
       if (!lib$es6$promise$utils$$isArray(entries)) {
-        lib$es6$promise$$internal$$reject(promise, new TypeError('You must pass an array to race.'));
-        return promise;
+        return new Constructor(function(resolve, reject) {
+          reject(new TypeError('You must pass an array to race.'));
+        });
+      } else {
+        return new Constructor(function(resolve, reject) {
+          var length = entries.length;
+          for (var i = 0; i < length; i++) {
+            Constructor.resolve(entries[i]).then(resolve, reject);
+          }
+        });
       }
-
-      var length = entries.length;
-
-      function onFulfillment(value) {
-        lib$es6$promise$$internal$$resolve(promise, value);
-      }
-
-      function onRejection(reason) {
-        lib$es6$promise$$internal$$reject(promise, reason);
-      }
-
-      for (var i = 0; promise._state === lib$es6$promise$$internal$$PENDING && i < length; i++) {
-        lib$es6$promise$$internal$$subscribe(Constructor.resolve(entries[i]), undefined, onFulfillment, onRejection);
-      }
-
-      return promise;
     }
     var lib$es6$promise$promise$race$$default = lib$es6$promise$promise$race$$race;
     function lib$es6$promise$promise$reject$$reject(reason) {
@@ -10908,7 +10518,6 @@ module.exports = {
     }
     var lib$es6$promise$promise$reject$$default = lib$es6$promise$promise$reject$$reject;
 
-    var lib$es6$promise$promise$$counter = 0;
 
     function lib$es6$promise$promise$$needsResolver() {
       throw new TypeError('You must pass a resolver function as the first argument to the promise constructor');
@@ -11023,9 +10632,8 @@ module.exports = {
       @constructor
     */
     function lib$es6$promise$promise$$Promise(resolver) {
-      this._id = lib$es6$promise$promise$$counter++;
-      this._state = undefined;
-      this._result = undefined;
+      this[lib$es6$promise$$internal$$PROMISE_ID] = lib$es6$promise$$internal$$nextId();
+      this._result = this._state = undefined;
       this._subscribers = [];
 
       if (lib$es6$promise$$internal$$noop !== resolver) {
@@ -11276,7 +10884,11 @@ module.exports = {
       this._instanceConstructor = Constructor;
       this.promise = new Constructor(lib$es6$promise$$internal$$noop);
 
-      if (Array.isArray(input)) {
+      if (!this.promise[lib$es6$promise$$internal$$PROMISE_ID]) {
+        lib$es6$promise$$internal$$makePromise(this.promise);
+      }
+
+      if (lib$es6$promise$utils$$isArray(input)) {
         this._input     = input;
         this.length     = input.length;
         this._remaining = input.length;
@@ -11293,13 +10905,13 @@ module.exports = {
           }
         }
       } else {
-        lib$es6$promise$$internal$$reject(this.promise, this._validationError());
+        lib$es6$promise$$internal$$reject(this.promise, lib$es6$promise$enumerator$$validationError());
       }
     }
 
-    lib$es6$promise$enumerator$$Enumerator.prototype._validationError = function() {
+    function lib$es6$promise$enumerator$$validationError() {
       return new Error('Array Methods must be provided an Array');
-    };
+    }
 
     lib$es6$promise$enumerator$$Enumerator.prototype._enumerate = function() {
       var length  = this.length;
@@ -11406,7 +11018,311 @@ module.exports = {
 
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":8}],12:[function(require,module,exports){
+},{"_process":13}],10:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+function EventEmitter() {
+  this._events = this._events || {};
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+EventEmitter.defaultMaxListeners = 10;
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!isNumber(n) || n < 0 || isNaN(n))
+    throw TypeError('n must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+EventEmitter.prototype.emit = function(type) {
+  var er, handler, len, args, i, listeners;
+
+  if (!this._events)
+    this._events = {};
+
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events.error ||
+        (isObject(this._events.error) && !this._events.error.length)) {
+      er = arguments[1];
+      if (er instanceof Error) {
+        throw er; // Unhandled 'error' event
+      } else {
+        // At least give some kind of context to the user
+        var err = new Error('Uncaught, unspecified "error" event. (' + er + ')');
+        err.context = er;
+        throw err;
+      }
+    }
+  }
+
+  handler = this._events[type];
+
+  if (isUndefined(handler))
+    return false;
+
+  if (isFunction(handler)) {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        args = Array.prototype.slice.call(arguments, 1);
+        handler.apply(this, args);
+    }
+  } else if (isObject(handler)) {
+    args = Array.prototype.slice.call(arguments, 1);
+    listeners = handler.slice();
+    len = listeners.length;
+    for (i = 0; i < len; i++)
+      listeners[i].apply(this, args);
+  }
+
+  return true;
+};
+
+EventEmitter.prototype.addListener = function(type, listener) {
+  var m;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events)
+    this._events = {};
+
+  // To avoid recursion in the case that type === "newListener"! Before
+  // adding it to the listeners, first emit "newListener".
+  if (this._events.newListener)
+    this.emit('newListener', type,
+              isFunction(listener.listener) ?
+              listener.listener : listener);
+
+  if (!this._events[type])
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  else if (isObject(this._events[type]))
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  else
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+
+  // Check for listener leak
+  if (isObject(this._events[type]) && !this._events[type].warned) {
+    if (!isUndefined(this._maxListeners)) {
+      m = this._maxListeners;
+    } else {
+      m = EventEmitter.defaultMaxListeners;
+    }
+
+    if (m && m > 0 && this._events[type].length > m) {
+      this._events[type].warned = true;
+      console.error('(node) warning: possible EventEmitter memory ' +
+                    'leak detected. %d listeners added. ' +
+                    'Use emitter.setMaxListeners() to increase limit.',
+                    this._events[type].length);
+      if (typeof console.trace === 'function') {
+        // not supported in IE 10
+        console.trace();
+      }
+    }
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  var fired = false;
+
+  function g() {
+    this.removeListener(type, g);
+
+    if (!fired) {
+      fired = true;
+      listener.apply(this, arguments);
+    }
+  }
+
+  g.listener = listener;
+  this.on(type, g);
+
+  return this;
+};
+
+// emits a 'removeListener' event iff the listener was removed
+EventEmitter.prototype.removeListener = function(type, listener) {
+  var list, position, length, i;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events || !this._events[type])
+    return this;
+
+  list = this._events[type];
+  length = list.length;
+  position = -1;
+
+  if (list === listener ||
+      (isFunction(list.listener) && list.listener === listener)) {
+    delete this._events[type];
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+
+  } else if (isObject(list)) {
+    for (i = length; i-- > 0;) {
+      if (list[i] === listener ||
+          (list[i].listener && list[i].listener === listener)) {
+        position = i;
+        break;
+      }
+    }
+
+    if (position < 0)
+      return this;
+
+    if (list.length === 1) {
+      list.length = 0;
+      delete this._events[type];
+    } else {
+      list.splice(position, 1);
+    }
+
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  var key, listeners;
+
+  if (!this._events)
+    return this;
+
+  // not listening for removeListener, no need to emit
+  if (!this._events.removeListener) {
+    if (arguments.length === 0)
+      this._events = {};
+    else if (this._events[type])
+      delete this._events[type];
+    return this;
+  }
+
+  // emit removeListener for all listeners on all events
+  if (arguments.length === 0) {
+    for (key in this._events) {
+      if (key === 'removeListener') continue;
+      this.removeAllListeners(key);
+    }
+    this.removeAllListeners('removeListener');
+    this._events = {};
+    return this;
+  }
+
+  listeners = this._events[type];
+
+  if (isFunction(listeners)) {
+    this.removeListener(type, listeners);
+  } else if (listeners) {
+    // LIFO order
+    while (listeners.length)
+      this.removeListener(type, listeners[listeners.length - 1]);
+  }
+  delete this._events[type];
+
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  var ret;
+  if (!this._events || !this._events[type])
+    ret = [];
+  else if (isFunction(this._events[type]))
+    ret = [this._events[type]];
+  else
+    ret = this._events[type].slice();
+  return ret;
+};
+
+EventEmitter.prototype.listenerCount = function(type) {
+  if (this._events) {
+    var evlistener = this._events[type];
+
+    if (isFunction(evlistener))
+      return 1;
+    else if (evlistener)
+      return evlistener.length;
+  }
+  return 0;
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  return emitter.listenerCount(type);
+};
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+
+},{}],11:[function(require,module,exports){
 /**
  * inspired by is-number <https://github.com/jonschlinkert/is-number>
  * but significantly simplified and sped up by ignoring number and string constructors
@@ -11463,7 +11379,7 @@ module.exports = function(n) {
     return n - n < 1;
 };
 
-},{}],13:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 module.exports = fromQuat;
 
 /**
@@ -11511,21 +11427,182 @@ function fromQuat(out, q) {
 
     return out;
 };
+},{}],13:[function(require,module,exports){
+// shim for using process in browser
+var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+(function () {
+    try {
+        cachedSetTimeout = setTimeout;
+    } catch (e) {
+        cachedSetTimeout = function () {
+            throw new Error('setTimeout is not defined');
+        }
+    }
+    try {
+        cachedClearTimeout = clearTimeout;
+    } catch (e) {
+        cachedClearTimeout = function () {
+            throw new Error('clearTimeout is not defined');
+        }
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = runTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        runTimeout(drainQueue);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
 },{}],14:[function(require,module,exports){
-// TinyColor v1.3.0
+// TinyColor v1.4.1
 // https://github.com/bgrins/TinyColor
 // Brian Grinstead, MIT License
 
-(function() {
+(function(Math) {
 
 var trimLeft = /^\s+/,
     trimRight = /\s+$/,
     tinyCounter = 0,
-    math = Math,
-    mathRound = math.round,
-    mathMin = math.min,
-    mathMax = math.max,
-    mathRandom = math.random;
+    mathRound = Math.round,
+    mathMin = Math.min,
+    mathMax = Math.max,
+    mathRandom = Math.random;
 
 function tinycolor (color, opts) {
 
@@ -11633,11 +11710,11 @@ tinycolor.prototype = {
     toHexString: function(allow3Char) {
         return '#' + this.toHex(allow3Char);
     },
-    toHex8: function() {
-        return rgbaToHex(this._r, this._g, this._b, this._a);
+    toHex8: function(allow4Char) {
+        return rgbaToHex(this._r, this._g, this._b, this._a, allow4Char);
     },
-    toHex8String: function() {
-        return '#' + this.toHex8();
+    toHex8String: function(allow4Char) {
+        return '#' + this.toHex8(allow4Char);
     },
     toRgb: function() {
         return { r: mathRound(this._r), g: mathRound(this._g), b: mathRound(this._b), a: this._a };
@@ -11667,13 +11744,13 @@ tinycolor.prototype = {
         return hexNames[rgbToHex(this._r, this._g, this._b, true)] || false;
     },
     toFilter: function(secondColor) {
-        var hex8String = '#' + rgbaToHex(this._r, this._g, this._b, this._a);
+        var hex8String = '#' + rgbaToArgbHex(this._r, this._g, this._b, this._a);
         var secondHex8String = hex8String;
         var gradientType = this._gradientType ? "GradientType = 1, " : "";
 
         if (secondColor) {
             var s = tinycolor(secondColor);
-            secondHex8String = s.toHex8String();
+            secondHex8String = '#' + rgbaToArgbHex(s._r, s._g, s._b, s._a);
         }
 
         return "progid:DXImageTransform.Microsoft.gradient("+gradientType+"startColorstr="+hex8String+",endColorstr="+secondHex8String+")";
@@ -11684,7 +11761,7 @@ tinycolor.prototype = {
 
         var formattedString = false;
         var hasAlpha = this._a < 1 && this._a >= 0;
-        var needsAlphaFormat = !formatSet && hasAlpha && (format === "hex" || format === "hex6" || format === "hex3" || format === "name");
+        var needsAlphaFormat = !formatSet && hasAlpha && (format === "hex" || format === "hex6" || format === "hex3" || format === "hex4" || format === "hex8" || format === "name");
 
         if (needsAlphaFormat) {
             // Special case for "transparent", all other non-alpha formats
@@ -11705,6 +11782,9 @@ tinycolor.prototype = {
         }
         if (format === "hex3") {
             formattedString = this.toHexString(true);
+        }
+        if (format === "hex4") {
+            formattedString = this.toHex8String(true);
         }
         if (format === "hex8") {
             formattedString = this.toHex8String();
@@ -11818,6 +11898,9 @@ function inputToRGB(color) {
 
     var rgb = { r: 0, g: 0, b: 0 };
     var a = 1;
+    var s = null;
+    var v = null;
+    var l = null;
     var ok = false;
     var format = false;
 
@@ -11826,22 +11909,22 @@ function inputToRGB(color) {
     }
 
     if (typeof color == "object") {
-        if (color.hasOwnProperty("r") && color.hasOwnProperty("g") && color.hasOwnProperty("b")) {
+        if (isValidCSSUnit(color.r) && isValidCSSUnit(color.g) && isValidCSSUnit(color.b)) {
             rgb = rgbToRgb(color.r, color.g, color.b);
             ok = true;
             format = String(color.r).substr(-1) === "%" ? "prgb" : "rgb";
         }
-        else if (color.hasOwnProperty("h") && color.hasOwnProperty("s") && color.hasOwnProperty("v")) {
-            color.s = convertToPercentage(color.s);
-            color.v = convertToPercentage(color.v);
-            rgb = hsvToRgb(color.h, color.s, color.v);
+        else if (isValidCSSUnit(color.h) && isValidCSSUnit(color.s) && isValidCSSUnit(color.v)) {
+            s = convertToPercentage(color.s);
+            v = convertToPercentage(color.v);
+            rgb = hsvToRgb(color.h, s, v);
             ok = true;
             format = "hsv";
         }
-        else if (color.hasOwnProperty("h") && color.hasOwnProperty("s") && color.hasOwnProperty("l")) {
-            color.s = convertToPercentage(color.s);
-            color.l = convertToPercentage(color.l);
-            rgb = hslToRgb(color.h, color.s, color.l);
+        else if (isValidCSSUnit(color.h) && isValidCSSUnit(color.s) && isValidCSSUnit(color.l)) {
+            s = convertToPercentage(color.s);
+            l = convertToPercentage(color.l);
+            rgb = hslToRgb(color.h, s, l);
             ok = true;
             format = "hsl";
         }
@@ -11988,7 +12071,7 @@ function rgbToHsv(r, g, b) {
     s = bound01(s, 100);
     v = bound01(v, 100);
 
-    var i = math.floor(h),
+    var i = Math.floor(h),
         f = h - i,
         p = v * (1 - s),
         q = v * (1 - f * s),
@@ -12023,9 +12106,29 @@ function rgbToHex(r, g, b, allow3Char) {
 
 // `rgbaToHex`
 // Converts an RGBA color plus alpha transparency to hex
-// Assumes r, g, b and a are contained in the set [0, 255]
-// Returns an 8 character hex
-function rgbaToHex(r, g, b, a) {
+// Assumes r, g, b are contained in the set [0, 255] and
+// a in [0, 1]. Returns a 4 or 8 character rgba hex
+function rgbaToHex(r, g, b, a, allow4Char) {
+
+    var hex = [
+        pad2(mathRound(r).toString(16)),
+        pad2(mathRound(g).toString(16)),
+        pad2(mathRound(b).toString(16)),
+        pad2(convertDecimalToHex(a))
+    ];
+
+    // Return a 4 character hex if possible
+    if (allow4Char && hex[0].charAt(0) == hex[0].charAt(1) && hex[1].charAt(0) == hex[1].charAt(1) && hex[2].charAt(0) == hex[2].charAt(1) && hex[3].charAt(0) == hex[3].charAt(1)) {
+        return hex[0].charAt(0) + hex[1].charAt(0) + hex[2].charAt(0) + hex[3].charAt(0);
+    }
+
+    return hex.join("");
+}
+
+// `rgbaToArgbHex`
+// Converts an RGBA color to an ARGB Hex8 string
+// Rarely used, but required for "toFilter()"
+function rgbaToArgbHex(r, g, b, a) {
 
     var hex = [
         pad2(convertDecimalToHex(a)),
@@ -12107,7 +12210,7 @@ function darken (color, amount) {
 // Values outside of this range will be wrapped into this range.
 function spin(color, amount) {
     var hsl = tinycolor(color).toHsl();
-    var hue = (mathRound(hsl.h) + amount) % 360;
+    var hue = (hsl.h + amount) % 360;
     hsl.h = hue < 0 ? 360 + hue : hue;
     return tinycolor(hsl);
 }
@@ -12194,26 +12297,12 @@ tinycolor.mix = function(color1, color2, amount) {
     var rgb2 = tinycolor(color2).toRgb();
 
     var p = amount / 100;
-    var w = p * 2 - 1;
-    var a = rgb2.a - rgb1.a;
-
-    var w1;
-
-    if (w * a == -1) {
-        w1 = w;
-    } else {
-        w1 = (w + a) / (1 + w * a);
-    }
-
-    w1 = (w1 + 1) / 2;
-
-    var w2 = 1 - w1;
 
     var rgba = {
-        r: rgb2.r * w1 + rgb1.r * w2,
-        g: rgb2.g * w1 + rgb1.g * w2,
-        b: rgb2.b * w1 + rgb1.b * w2,
-        a: rgb2.a * p  + rgb1.a * (1 - p)
+        r: ((rgb2.r - rgb1.r) * p) + rgb1.r,
+        g: ((rgb2.g - rgb1.g) * p) + rgb1.g,
+        b: ((rgb2.b - rgb1.b) * p) + rgb1.b,
+        a: ((rgb2.a - rgb1.a) * p) + rgb1.a
     };
 
     return tinycolor(rgba);
@@ -12499,7 +12588,7 @@ function bound01(n, max) {
     }
 
     // Handle floating point rounding errors
-    if ((math.abs(n - max) < 0.000001)) {
+    if ((Math.abs(n - max) < 0.000001)) {
         return 1;
     }
 
@@ -12569,6 +12658,7 @@ var matchers = (function() {
     var PERMISSIVE_MATCH4 = "[\\s|\\(]+(" + CSS_UNIT + ")[,|\\s]+(" + CSS_UNIT + ")[,|\\s]+(" + CSS_UNIT + ")[,|\\s]+(" + CSS_UNIT + ")\\s*\\)?";
 
     return {
+        CSS_UNIT: new RegExp(CSS_UNIT),
         rgb: new RegExp("rgb" + PERMISSIVE_MATCH3),
         rgba: new RegExp("rgba" + PERMISSIVE_MATCH4),
         hsl: new RegExp("hsl" + PERMISSIVE_MATCH3),
@@ -12577,9 +12667,17 @@ var matchers = (function() {
         hsva: new RegExp("hsva" + PERMISSIVE_MATCH4),
         hex3: /^#?([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})$/,
         hex6: /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/,
+        hex4: /^#?([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})$/,
         hex8: /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/
     };
 })();
+
+// `isValidCSSUnit`
+// Take in a single string / number and check to see if it looks like a CSS unit
+// (see `matchers` above for definition).
+function isValidCSSUnit(color) {
+    return !!matchers.CSS_UNIT.exec(color);
+}
 
 // `stringInputToObject`
 // Permissive string parsing.  Take in a number of formats, and output an object
@@ -12621,10 +12719,10 @@ function stringInputToObject(color) {
     }
     if ((match = matchers.hex8.exec(color))) {
         return {
-            a: convertHexToDecimal(match[1]),
-            r: parseIntFromHex(match[2]),
-            g: parseIntFromHex(match[3]),
-            b: parseIntFromHex(match[4]),
+            r: parseIntFromHex(match[1]),
+            g: parseIntFromHex(match[2]),
+            b: parseIntFromHex(match[3]),
+            a: convertHexToDecimal(match[4]),
             format: named ? "name" : "hex8"
         };
     }
@@ -12634,6 +12732,15 @@ function stringInputToObject(color) {
             g: parseIntFromHex(match[2]),
             b: parseIntFromHex(match[3]),
             format: named ? "name" : "hex"
+        };
+    }
+    if ((match = matchers.hex4.exec(color))) {
+        return {
+            r: parseIntFromHex(match[1] + '' + match[1]),
+            g: parseIntFromHex(match[2] + '' + match[2]),
+            b: parseIntFromHex(match[3] + '' + match[3]),
+            a: convertHexToDecimal(match[4] + '' + match[4]),
+            format: named ? "name" : "hex8"
         };
     }
     if ((match = matchers.hex3.exec(color))) {
@@ -12677,18 +12784,18 @@ else {
     window.tinycolor = tinycolor;
 }
 
-})();
+})(Math);
 
 },{}],15:[function(require,module,exports){
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
   typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (factory((global.topojson = {})));
+  (factory((global.topojson = global.topojson || {})));
 }(this, function (exports) { 'use strict';
 
   function noop() {}
 
-  function absolute(transform) {
+  function transformAbsolute(transform) {
     if (!transform) return noop;
     var x0,
         y0,
@@ -12703,7 +12810,7 @@ else {
     };
   }
 
-  function relative(transform) {
+  function transformRelative(transform) {
     if (!transform) return noop;
     var x0,
         y0,
@@ -12713,8 +12820,8 @@ else {
         dy = transform.translate[1];
     return function(point, i) {
       if (!i) x0 = y0 = 0;
-      var x1 = (point[0] - dx) / kx | 0,
-          y1 = (point[1] - dy) / ky | 0;
+      var x1 = Math.round((point[0] - dx) / kx),
+          y1 = Math.round((point[1] - dy) / ky);
       point[0] = x1 - x0;
       point[1] = y1 - y0;
       x0 = x1;
@@ -12756,21 +12863,21 @@ else {
   }
 
   function object(topology, o) {
-    var absolute$$ = absolute(topology.transform),
+    var absolute = transformAbsolute(topology.transform),
         arcs = topology.arcs;
 
     function arc(i, points) {
       if (points.length) points.pop();
       for (var a = arcs[i < 0 ? ~i : i], k = 0, n = a.length, p; k < n; ++k) {
         points.push(p = a[k].slice());
-        absolute$$(p, k);
+        absolute(p, k);
       }
       if (i < 0) reverse(points, n);
     }
 
     function point(p) {
       p = p.slice();
-      absolute$$(p, 0);
+      absolute(p, 0);
       return p;
     }
 
@@ -12932,7 +13039,7 @@ else {
     return {type: "MultiLineString", arcs: stitchArcs(topology, arcs)};
   }
 
-  function triangle(triangle) {
+  function cartesianTriangleArea(triangle) {
     var a = triangle[0], b = triangle[1], c = triangle[2];
     return Math.abs((a[0] - c[0]) * (b[1] - a[1]) - (a[0] - b[0]) * (c[1] - a[1]));
   }
@@ -12976,8 +13083,8 @@ else {
       polygons.push(polygon);
     }
 
-    function exterior(ring$$) {
-      return ring(object(topology, {type: "Polygon", arcs: [ring$$]}).coordinates[0]) > 0; // TODO allow spherical?
+    function area(ring$$) {
+      return Math.abs(ring(object(topology, {type: "Polygon", arcs: [ring$$]}).coordinates[0]));
     }
 
     polygons.forEach(function(polygon) {
@@ -13027,14 +13134,11 @@ else {
 
         // If more than one ring is returned,
         // at most one of these rings can be the exterior;
-        // this exterior ring has the same winding order
-        // as any exterior ring in the original polygons.
+        // choose the one with the greatest absolute area.
         if ((n = arcs.length) > 1) {
-          var sgn = exterior(polygons[0][0]);
-          for (var i = 0, t; i < n; ++i) {
-            if (sgn === exterior(arcs[i])) {
-              t = arcs[0], arcs[0] = arcs[i], arcs[i] = t;
-              break;
+          for (var i = 1, k = area(arcs[0]), ki, t; i < n; ++i) {
+            if ((ki = area(arcs[i])) > k) {
+              t = arcs[0], arcs[0] = arcs[i], arcs[i] = t, k = ki;
             }
           }
         }
@@ -13144,11 +13248,11 @@ else {
   }
 
   function presimplify(topology, triangleArea) {
-    var absolute$$ = absolute(topology.transform),
-        relative$$ = relative(topology.transform),
+    var absolute = transformAbsolute(topology.transform),
+        relative = transformRelative(topology.transform),
         heap = minAreaHeap();
 
-    if (!triangleArea) triangleArea = triangle;
+    if (!triangleArea) triangleArea = cartesianTriangleArea;
 
     topology.arcs.forEach(function(arc) {
       var triangles = [],
@@ -13164,7 +13268,7 @@ else {
       // Infinity will be computed in the next step.
       for (i = 0, n = arc.length; i < n; ++i) {
         p = arc[i];
-        absolute$$(arc[i] = [p[0], p[1], Infinity], i);
+        absolute(arc[i] = [p[0], p[1], Infinity], i);
       }
 
       for (i = 1, n = arc.length - 1; i < n; ++i) {
@@ -13204,7 +13308,7 @@ else {
         }
       }
 
-      arc.forEach(relative$$);
+      arc.forEach(relative);
     });
 
     function update(triangle) {
@@ -13216,7 +13320,7 @@ else {
     return topology;
   }
 
-  var version = "1.6.24";
+  var version = "1.6.26";
 
   exports.version = version;
   exports.mesh = mesh;
@@ -13483,7 +13587,7 @@ module.exports = {
     }
 };
 
-},{"../../lib/extend":97,"../../plots/cartesian/constants":127,"../../plots/font_attributes":140,"./arrow_paths":16}],18:[function(require,module,exports){
+},{"../../lib/extend":97,"../../plots/cartesian/constants":127,"../../plots/font_attributes":141,"./arrow_paths":16}],18:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -14492,7 +14596,7 @@ function lineIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
     return {x: x1 + a * t, y: y1 + d * t};
 }
 
-},{"../../lib":100,"../../lib/setcursor":109,"../../lib/svg_text_utils":111,"../../plotly":119,"../../plots/cartesian/axes":122,"../color":20,"../dragelement":41,"../drawing":43,"./arrow_paths":16,"./attributes":17,"d3":10,"fast-isnumeric":12}],19:[function(require,module,exports){
+},{"../../lib":100,"../../lib/setcursor":109,"../../lib/svg_text_utils":111,"../../plotly":119,"../../plots/cartesian/axes":122,"../color":20,"../dragelement":41,"../drawing":43,"./arrow_paths":16,"./attributes":17,"d3":8,"fast-isnumeric":11}],19:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -14686,7 +14790,7 @@ function cleanOne(val) {
     return 'rgb(' + rgbStr + ')';
 }
 
-},{"./attributes":19,"fast-isnumeric":12,"tinycolor2":14}],21:[function(require,module,exports){
+},{"./attributes":19,"fast-isnumeric":11,"tinycolor2":14}],21:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -14841,7 +14945,7 @@ module.exports = {
     }
 };
 
-},{"../../lib/extend":97,"../../plots/cartesian/layout_attributes":131,"../../plots/font_attributes":140}],22:[function(require,module,exports){
+},{"../../lib/extend":97,"../../plots/cartesian/layout_attributes":131,"../../plots/font_attributes":141}],22:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -15538,7 +15642,7 @@ module.exports = function draw(gd, id) {
     return component;
 };
 
-},{"../../lib":100,"../../lib/extend":97,"../../lib/setcursor":109,"../../plotly":119,"../../plots/cartesian/axes":122,"../../plots/cartesian/axis_defaults":123,"../../plots/cartesian/layout_attributes":131,"../../plots/cartesian/position_defaults":134,"../../plots/plots":154,"../color":20,"../dragelement":41,"../drawing":43,"../titles":83,"./attributes":21,"d3":10,"tinycolor2":14}],24:[function(require,module,exports){
+},{"../../lib":100,"../../lib/extend":97,"../../lib/setcursor":109,"../../plotly":119,"../../plots/cartesian/axes":122,"../../plots/cartesian/axis_defaults":123,"../../plots/cartesian/layout_attributes":131,"../../plots/cartesian/position_defaults":134,"../../plots/plots":155,"../color":20,"../dragelement":41,"../drawing":43,"../titles":83,"./attributes":21,"d3":8,"tinycolor2":14}],24:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -15823,7 +15927,7 @@ module.exports = function colorScaleDefaults(traceIn, traceOut, layout, coerce, 
     if(showScale) colorbarDefaults(containerIn, containerOut, layout);
 };
 
-},{"../../lib":100,"../colorbar/defaults":22,"../colorbar/has_colorbar":24,"./flip_scale":31,"./is_valid_scale":35,"fast-isnumeric":12}],31:[function(require,module,exports){
+},{"../../lib":100,"../colorbar/defaults":22,"../colorbar/has_colorbar":24,"./flip_scale":31,"./is_valid_scale":35,"fast-isnumeric":11}],31:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -15934,7 +16038,7 @@ module.exports = function hasColorscale(trace, containerStr) {
     );
 };
 
-},{"../../lib":100,"./is_valid_scale":35,"fast-isnumeric":12}],34:[function(require,module,exports){
+},{"../../lib":100,"./is_valid_scale":35,"fast-isnumeric":11}],34:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -16073,7 +16177,7 @@ module.exports = function makeScaleFunction(scl, cmin, cmax) {
     };
 };
 
-},{"../../lib":100,"../color":20,"d3":10,"fast-isnumeric":12,"tinycolor2":14}],38:[function(require,module,exports){
+},{"../../lib":100,"../color":20,"d3":8,"fast-isnumeric":11,"tinycolor2":14}],38:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -16560,16 +16664,62 @@ drawing.setRect = function(s, x, y, w, h) {
     s.call(drawing.setPosition, x, y).call(drawing.setSize, w, h);
 };
 
-drawing.translatePoints = function(s, xa, ya) {
-    s.each(function(d) {
+drawing.translatePoints = function(s, xa, ya, trace, transitionConfig, joinDirection) {
+    var size;
+
+    var hasTransition = transitionConfig && (transitionConfig || {}).duration > 0;
+
+    if(hasTransition) {
+        size = s.size();
+    }
+
+    s.each(function(d, i) {
         // put xp and yp into d if pixel scaling is already done
         var x = d.xp || xa.c2p(d.x),
             y = d.yp || ya.c2p(d.y),
             p = d3.select(this);
         if(isNumeric(x) && isNumeric(y)) {
             // for multiline text this works better
-            if(this.nodeName === 'text') p.attr('x', x).attr('y', y);
-            else p.attr('transform', 'translate(' + x + ',' + y + ')');
+            if(this.nodeName === 'text') {
+                p.attr('x', x).attr('y', y);
+            } else {
+                if(hasTransition) {
+                    var trans;
+                    if(!joinDirection) {
+                        trans = p.transition()
+                        .delay(transitionConfig.delay + transitionConfig.cascade / size * i)
+                        .duration(transitionConfig.duration)
+                        .ease(transitionConfig.ease)
+                        .attr('transform', 'translate(' + x + ',' + y + ')');
+
+                        if(trace) {
+                            trans.call(drawing.pointStyle, trace);
+                        }
+                    } else if(joinDirection === -1) {
+                        trans = p.style('opacity', 1)
+                        .transition()
+                            .duration(transitionConfig.duration)
+                            .ease(transitionConfig.ease)
+                            .style('opacity', 0)
+                            .remove();
+                    } else if(joinDirection === 1) {
+                        trans = p.attr('transform', 'translate(' + x + ',' + y + ')');
+
+                        if(trace) {
+                            trans.call(drawing.pointStyle, trace);
+                        }
+
+                        trans.style('opacity', 0)
+                        .transition()
+                            .duration(transitionConfig.duration)
+                            .ease(transitionConfig.ease)
+                            .style('opacity', 1);
+                    }
+
+                } else {
+                    p.attr('transform', 'translate(' + x + ',' + y + ')');
+                }
+            }
         }
         else p.remove();
     });
@@ -17075,7 +17225,7 @@ drawing.setClipUrl = function(s, localId) {
     s.attr('clip-path', 'url(' + url + ')');
 };
 
-},{"../../constants/xmlns_namespaces":90,"../../lib":100,"../../lib/svg_text_utils":111,"../../plots/plots":154,"../../traces/scatter/make_bubble_size_func":190,"../../traces/scatter/subtypes":195,"../color":20,"../colorscale":34,"./symbol_defs":44,"d3":10,"fast-isnumeric":12}],44:[function(require,module,exports){
+},{"../../constants/xmlns_namespaces":90,"../../lib":100,"../../lib/svg_text_utils":111,"../../plots/plots":155,"../../traces/scatter/make_bubble_size_func":192,"../../traces/scatter/subtypes":197,"../color":20,"../colorscale":34,"./symbol_defs":44,"d3":8,"fast-isnumeric":11}],44:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -17551,7 +17701,7 @@ module.exports = {
     }
 };
 
-},{"d3":10}],45:[function(require,module,exports){
+},{"d3":8}],45:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -17713,7 +17863,7 @@ function calcOneAxis(calcTrace, trace, axis, coord) {
     Axes.expand(axis, vals, {padded: true});
 }
 
-},{"../../plots/cartesian/axes":122,"../../plots/plots":154,"./compute_error":47,"fast-isnumeric":12}],47:[function(require,module,exports){
+},{"../../plots/cartesian/axes":122,"../../plots/plots":155,"./compute_error":47,"fast-isnumeric":11}],47:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -17886,7 +18036,7 @@ module.exports = function(traceIn, traceOut, defaultColor, opts) {
     }
 };
 
-},{"../../lib":100,"../../plots/plots":154,"./attributes":45,"fast-isnumeric":12}],49:[function(require,module,exports){
+},{"../../lib":100,"../../plots/plots":155,"./attributes":45,"fast-isnumeric":11}],49:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -17960,13 +18110,17 @@ errorBars.hoverInfo = function(calcPoint, trace, hoverPoint) {
 var d3 = require('d3');
 var isNumeric = require('fast-isnumeric');
 
-var Lib = require('../../lib');
 var subTypes = require('../../traces/scatter/subtypes');
+var styleError = require('./style');
 
 
-module.exports = function plot(traces, plotinfo) {
+module.exports = function plot(traces, plotinfo, transitionConfig) {
+    var isNew;
     var xa = plotinfo.x(),
         ya = plotinfo.y();
+
+    transitionConfig = transitionConfig || {};
+    var hasAnimation = isNumeric(transitionConfig.duration) && transitionConfig.duration > 0;
 
     traces.each(function(d) {
         var trace = d[0].trace,
@@ -17977,6 +18131,12 @@ module.exports = function plot(traces, plotinfo) {
             xObj = trace.error_x || {},
             yObj = trace.error_y || {};
 
+        var keyFunc;
+
+        if(trace.identifier) {
+            keyFunc = function(d) {return d.identifier;};
+        }
+
         var sparse = (
             subTypes.hasMarkers(trace) &&
             trace.marker.maxdisplayed > 0
@@ -17985,10 +18145,20 @@ module.exports = function plot(traces, plotinfo) {
         if(!yObj.visible && !xObj.visible) return;
 
         var errorbars = d3.select(this).selectAll('g.errorbar')
-            .data(Lib.identity);
+            .data(d, keyFunc);
 
-        errorbars.enter().append('g')
+        errorbars.exit().remove();
+
+        errorbars.style('opacity', 1);
+
+        var enter = errorbars.enter().append('g')
             .classed('errorbar', true);
+
+        if(hasAnimation) {
+            enter.style('opacity', 0).transition()
+                .duration(transitionConfig.duration)
+                .style('opacity', 1);
+        }
 
         errorbars.each(function(d) {
             var errorbar = d3.select(this);
@@ -18007,14 +18177,28 @@ module.exports = function plot(traces, plotinfo) {
                     coords.yh + 'h' + (2 * yw) + // hat
                     'm-' + yw + ',0V' + coords.ys; // bar
 
+
                 if(!coords.noYS) path += 'm-' + yw + ',0h' + (2 * yw); // shoe
 
-                errorbar.append('path')
-                    .classed('yerror', true)
-                    .attr('d', path);
+                var yerror = errorbar.select('path.yerror');
+
+                isNew = !yerror.size();
+
+                if(isNew) {
+                    yerror = errorbar.append('path')
+                        .classed('yerror', true);
+                } else if(hasAnimation) {
+                    yerror = yerror
+                        .transition()
+                            .duration(transitionConfig.duration)
+                            .ease(transitionConfig.ease)
+                            .delay(transitionConfig.delay);
+                }
+
+                yerror.attr('d', path);
             }
 
-            if(xObj.visible && isNumeric(coords.y) &&
+            if(xObj.visible && isNumeric(coords.x) &&
                     isNumeric(coords.xh) &&
                     isNumeric(coords.xs)) {
                 var xw = (xObj.copy_ystyle ? yObj : xObj).width;
@@ -18025,11 +18209,26 @@ module.exports = function plot(traces, plotinfo) {
 
                 if(!coords.noXS) path += 'm0,-' + xw + 'v' + (2 * xw); // shoe
 
-                errorbar.append('path')
-                    .classed('xerror', true)
-                    .attr('d', path);
+                var xerror = errorbar.select('path.xerror');
+
+                isNew = !xerror.size();
+
+                if(isNew) {
+                    xerror = errorbar.append('path')
+                        .classed('xerror', true);
+                } else if(hasAnimation) {
+                    xerror = xerror
+                        .transition()
+                            .duration(transitionConfig.duration)
+                            .ease(transitionConfig.ease)
+                            .delay(transitionConfig.delay);
+                }
+
+                xerror.attr('d', path);
             }
         });
+
+        d3.select(this).call(styleError);
     });
 };
 
@@ -18066,7 +18265,7 @@ function errorCoords(d, xa, ya) {
     return out;
 }
 
-},{"../../lib":100,"../../traces/scatter/subtypes":195,"d3":10,"fast-isnumeric":12}],51:[function(require,module,exports){
+},{"../../traces/scatter/subtypes":197,"./style":51,"d3":8,"fast-isnumeric":11}],51:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -18103,7 +18302,7 @@ module.exports = function style(traces) {
     });
 };
 
-},{"../color":20,"d3":10}],52:[function(require,module,exports){
+},{"../color":20,"d3":8}],52:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -18457,7 +18656,7 @@ module.exports = function draw(gd) {
     imagesAbove.each(applyAttributes);
 };
 
-},{"../../plots/cartesian/axes":122,"../drawing":43,"d3":10}],55:[function(require,module,exports){
+},{"../../plots/cartesian/axes":122,"../drawing":43,"d3":8}],55:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -18620,7 +18819,7 @@ module.exports = {
     }
 };
 
-},{"../../lib/extend":97,"../../plots/font_attributes":140,"../color/attributes":19}],58:[function(require,module,exports){
+},{"../../lib/extend":97,"../../plots/font_attributes":141,"../color/attributes":19}],58:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -18730,7 +18929,7 @@ module.exports = function legendDefaults(layoutIn, layoutOut, fullData) {
     Lib.noneOrAll(containerIn, containerOut, ['x', 'y']);
 };
 
-},{"../../lib":100,"../../plots/plots":154,"./attributes":57,"./helpers":62}],60:[function(require,module,exports){
+},{"../../lib":100,"../../plots/plots":155,"./attributes":57,"./helpers":62}],60:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -19403,7 +19602,7 @@ function expandHorizontalMargin(gd) {
     });
 }
 
-},{"../../lib":100,"../../plotly":119,"../../plots/plots":154,"../color":20,"../dragelement":41,"../drawing":43,"./anchor_utils":56,"./constants":58,"./get_legend_data":61,"./helpers":62,"./style":64,"d3":10}],61:[function(require,module,exports){
+},{"../../lib":100,"../../plotly":119,"../../plots/plots":155,"../color":20,"../dragelement":41,"../drawing":43,"./anchor_utils":56,"./constants":58,"./get_legend_data":61,"./helpers":62,"./style":64,"d3":8}],61:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -19509,7 +19708,7 @@ module.exports = function getLegendData(calcdata, opts) {
     return legendData;
 };
 
-},{"../../plots/plots":154,"./helpers":62}],62:[function(require,module,exports){
+},{"../../plots/plots":155,"./helpers":62}],62:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -19540,7 +19739,7 @@ exports.isReversed = function isReversed(legendLayout) {
     return (legendLayout.traceorder || '').indexOf('reversed') !== -1;
 };
 
-},{"../../plots/plots":154}],63:[function(require,module,exports){
+},{"../../plots/plots":155}],63:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -19785,7 +19984,7 @@ function stylePies(d) {
     if(pts.size()) pts.call(stylePie, d[0], trace);
 }
 
-},{"../../lib":100,"../../plots/plots":154,"../../traces/pie/style_one":174,"../../traces/scatter/subtypes":195,"../color":20,"../drawing":43,"d3":10}],65:[function(require,module,exports){
+},{"../../lib":100,"../../plots/plots":155,"../../traces/pie/style_one":175,"../../traces/scatter/subtypes":197,"../color":20,"../drawing":43,"d3":8}],65:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -20293,7 +20492,7 @@ modeBarButtons.resetViews = {
     }
 };
 
-},{"../../../build/ploticon":2,"../../lib":100,"../../plotly":119,"../../snapshot/download":162}],66:[function(require,module,exports){
+},{"../../../build/ploticon":2,"../../lib":100,"../../plotly":119,"../../snapshot/download":163}],66:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -20583,7 +20782,7 @@ function createModeBar(gd, buttons) {
 
 module.exports = createModeBar;
 
-},{"../../../build/ploticon":2,"../../lib":100,"d3":10}],67:[function(require,module,exports){
+},{"../../../build/ploticon":2,"../../lib":100,"d3":8}],67:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -20811,7 +21010,7 @@ function fillCustomButton(customButtons) {
     return customButtons;
 }
 
-},{"../../plotly":119,"../../traces/scatter/subtypes":195,"./":66,"./buttons":65}],68:[function(require,module,exports){
+},{"../../plotly":119,"../../traces/scatter/subtypes":197,"./":66,"./buttons":65}],68:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -20900,7 +21099,7 @@ module.exports = {
     }
 };
 
-},{"../../lib/extend":97,"../../plots/font_attributes":140,"../color/attributes":19,"./button_attributes":69}],69:[function(require,module,exports){
+},{"../../lib/extend":97,"../../plots/font_attributes":141,"../color/attributes":19,"./button_attributes":69}],69:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -21337,7 +21536,7 @@ function reposition(gd, buttons, opts, axName) {
     });
 }
 
-},{"../../lib/svg_text_utils":111,"../../plotly":119,"../../plots/cartesian/axis_ids":124,"../../plots/plots":154,"../color":20,"../drawing":43,"../legend/anchor_utils":56,"./constants":70,"./get_update_object":73,"d3":10}],73:[function(require,module,exports){
+},{"../../lib/svg_text_utils":111,"../../plotly":119,"../../plots/cartesian/axis_ids":124,"../../plots/plots":155,"../color":20,"../drawing":43,"../legend/anchor_utils":56,"./constants":70,"./get_update_object":73,"d3":8}],73:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -21395,7 +21594,7 @@ function getXRange(axisLayout, buttonLayout) {
     return [range0, range1];
 }
 
-},{"d3":10}],74:[function(require,module,exports){
+},{"d3":8}],74:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -21903,7 +22102,7 @@ function draw(gd) {
     });
 }
 
-},{"../../plots/plots":154,"./create_slider":76,"./defaults":77}],80:[function(require,module,exports){
+},{"../../plots/plots":155,"./create_slider":76,"./defaults":77}],80:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -22084,7 +22283,7 @@ function makeScatter(trace, pointPairs, w, h) {
     return [line, markers, fill];
 }
 
-},{"../../constants/xmlns_namespaces":90,"../../lib":100,"../drawing":43,"../drawing/symbol_defs":44,"./helpers":78,"d3":10}],81:[function(require,module,exports){
+},{"../../constants/xmlns_namespaces":90,"../../lib":100,"../drawing":43,"../drawing/symbol_defs":44,"./helpers":78,"d3":8}],81:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -22175,7 +22374,7 @@ module.exports = {
     }
 };
 
-},{"../../lib/extend":97,"../../traces/scatter/attributes":176,"../annotations/attributes":17}],82:[function(require,module,exports){
+},{"../../lib/extend":97,"../../traces/scatter/attributes":177,"../annotations/attributes":17}],82:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -22965,7 +23164,7 @@ function shapeBounds(ax, v0, v1, path, paramsToUse) {
     if(max >= min) return [min, max];
 }
 
-},{"../../lib":100,"../../lib/setcursor":109,"../../plotly":119,"../../plots/cartesian/axes":122,"../color":20,"../dragelement":41,"../drawing":43,"./attributes":81,"fast-isnumeric":12}],83:[function(require,module,exports){
+},{"../../lib":100,"../../lib/setcursor":109,"../../plotly":119,"../../plots/cartesian/axes":122,"../color":20,"../dragelement":41,"../drawing":43,"./attributes":81,"fast-isnumeric":11}],83:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -23195,7 +23394,7 @@ Titles.draw = function(gd, titleClass, options) {
     el.classed('js-placeholder', isplaceholder);
 };
 
-},{"../../lib":100,"../../lib/svg_text_utils":111,"../../plotly":119,"../../plots/plots":154,"../color":20,"../drawing":43,"d3":10,"fast-isnumeric":12}],84:[function(require,module,exports){
+},{"../../lib":100,"../../lib/svg_text_utils":111,"../../plotly":119,"../../plots/plots":155,"../color":20,"../drawing":43,"d3":8,"fast-isnumeric":11}],84:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -23313,7 +23512,7 @@ module.exports = {
     }
 };
 
-},{"../../lib/extend":97,"../../plots/font_attributes":140,"../color/attributes":19}],85:[function(require,module,exports){
+},{"../../lib/extend":97,"../../plots/font_attributes":141,"../color/attributes":19}],85:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -23943,7 +24142,7 @@ function clearPushMargins(gd) {
     }
 }
 
-},{"../../lib":100,"../../lib/svg_text_utils":111,"../../plotly":119,"../../plots/plots":154,"../color":20,"../drawing":43,"../legend/anchor_utils":56,"./constants":85,"d3":10}],88:[function(require,module,exports){
+},{"../../lib":100,"../../lib/svg_text_utils":111,"../../plotly":119,"../../plots/plots":155,"../color":20,"../drawing":43,"../legend/anchor_utils":56,"./constants":85,"d3":8}],88:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -24060,6 +24259,10 @@ exports.register = Plotly.register;
 exports.toImage = require('./plot_api/to_image');
 exports.downloadImage = require('./snapshot/download');
 exports.validate = require('./plot_api/validate');
+exports.addFrames = Plotly.addFrames;
+exports.deleteFrames = Plotly.deleteFrames;
+exports.transition = Plotly.transition;
+exports.animate = Plotly.animate;
 
 // plot icons
 exports.Icons = require('../build/ploticon');
@@ -24074,7 +24277,7 @@ exports.Queue = Plotly.Queue;
 // export d3 used in the bundle
 exports.d3 = require('d3');
 
-},{"../build/ploticon":2,"./plot_api/set_plot_config":116,"./plot_api/to_image":117,"./plot_api/validate":118,"./plotly":119,"./snapshot/download":162,"d3":10}],92:[function(require,module,exports){
+},{"../build/ploticon":2,"./plot_api/set_plot_config":116,"./plot_api/to_image":117,"./plot_api/validate":118,"./plotly":119,"./snapshot/download":163,"d3":8}],92:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -24434,7 +24637,7 @@ exports.validate = function(value, opts) {
     return out !== failed;
 };
 
-},{"../components/colorscale/get_scale":32,"../components/colorscale/scales":38,"./nested_property":104,"fast-isnumeric":12,"tinycolor2":14}],95:[function(require,module,exports){
+},{"../components/colorscale/get_scale":32,"../components/colorscale/scales":38,"./nested_property":104,"fast-isnumeric":11,"tinycolor2":14}],95:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -24773,7 +24976,7 @@ exports.parseDate = function(v) {
     return out;
 };
 
-},{"../lib":100,"d3":10,"fast-isnumeric":12}],96:[function(require,module,exports){
+},{"../lib":100,"d3":8,"fast-isnumeric":11}],96:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -24907,7 +25110,7 @@ var Events = {
 
 module.exports = Events;
 
-},{"events":7}],97:[function(require,module,exports){
+},{"events":10}],97:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -25104,7 +25307,7 @@ function countryNameToISO3(countryName) {
     Lib.warn('Unrecognized country name: ' + countryName + '.');
 }
 
-},{"../lib":100,"country-regex":9}],100:[function(require,module,exports){
+},{"../lib":100,"country-regex":7}],100:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -25681,6 +25884,40 @@ lib.objectFromPath = function(path, value) {
 };
 
 /**
+ * Iterate through an object in-place, converting dotted properties to objects.
+ *
+ * @example
+ * lib.expandObjectPaths({'nested.test.path': 'value'});
+ * // returns { nested: { test: {path: 'value'}}}
+ */
+
+// Store this to avoid recompiling regex on every prop since this may happen many
+// many times for animations.
+// TODO: Premature optimization? Remove?
+var dottedPropertyRegex = /^([^\.]*)\../;
+
+lib.expandObjectPaths = function(data) {
+    var match, key, prop, datum;
+    if(typeof data === 'object' && !Array.isArray(data)) {
+        for(key in data) {
+            if(data.hasOwnProperty(key)) {
+                if((match = key.match(dottedPropertyRegex))) {
+                    datum = data[key];
+                    prop = match[1];
+
+                    delete data[key];
+
+                    data[prop] = lib.extendDeepNoArrays(data[prop] || {}, lib.objectFromPath(key, lib.expandObjectPaths(datum))[prop]);
+                } else {
+                    data[key] = lib.expandObjectPaths(data[key]);
+                }
+            }
+        }
+    }
+    return data;
+};
+
+/**
  * Converts value to string separated by the provided separators.
  *
  * @example
@@ -25724,7 +25961,93 @@ lib.numSeparate = function(value, separators) {
     return x1 + x2;
 };
 
-},{"./coerce":94,"./dates":95,"./extend":97,"./is_plain_object":101,"./loggers":102,"./matrix":103,"./nested_property":104,"./notifier":105,"./search":108,"./stats":110,"d3":10}],101:[function(require,module,exports){
+/*
+ * Compute a keyframe. Merge a keyframe into its base frame(s) and
+ * expand properties.
+ *
+ * @param {object} frameLookup
+ *      An object containing frames keyed by name (i.e. gd._transitionData._frameHash)
+ * @param {string} frame
+ *      The name of the keyframe to be computed
+ *
+ * Returns: a new object with the merged content
+ */
+lib.computeFrame = function(frameLookup, frameName) {
+    var i, traceIndices, traceIndex, expandedObj, destIndex, copy;
+
+    var framePtr = frameLookup[frameName];
+
+    // Return false if the name is invalid:
+    if(!framePtr) {
+        return false;
+    }
+
+    var frameStack = [framePtr];
+    var frameNameStack = [framePtr.name];
+
+    // Follow frame pointers:
+    while((framePtr = frameLookup[framePtr.baseFrame])) {
+        // Avoid infinite loops:
+        if(frameNameStack.indexOf(framePtr.name) !== -1) break;
+
+        frameStack.push(framePtr);
+        frameNameStack.push(framePtr.name);
+    }
+
+    // A new object for the merged result:
+    var result = {};
+
+    // Merge, starting with the last and ending with the desired frame:
+    while((framePtr = frameStack.pop())) {
+        if(framePtr.layout) {
+            copy = lib.extendDeepNoArrays({}, framePtr.layout);
+            expandedObj = lib.expandObjectPaths(copy);
+            result.layout = lib.extendDeepNoArrays(result.layout || {}, expandedObj);
+        }
+
+        if(framePtr.data) {
+            if(!result.data) {
+                result.data = [];
+            }
+            traceIndices = framePtr.traceIndices;
+
+            if(!traceIndices) {
+                // If not defined, assume serial order starting at zero
+                traceIndices = [];
+                for(i = 0; i < framePtr.data.length; i++) {
+                    traceIndices[i] = i;
+                }
+            }
+
+            if(!result.traceIndices) {
+                result.traceIndices = [];
+            }
+
+            for(i = 0; i < framePtr.data.length; i++) {
+                // Loop through this frames data, find out where it should go,
+                // and merge it!
+                traceIndex = traceIndices[i];
+                if(traceIndex === undefined || traceIndex === null) {
+                    continue;
+                }
+
+                destIndex = result.traceIndices.indexOf(traceIndex);
+                if(destIndex === -1) {
+                    destIndex = result.data.length;
+                    result.traceIndices[destIndex] = traceIndex;
+                }
+
+                copy = lib.extendDeepNoArrays({}, framePtr.data[i]);
+                expandedObj = lib.expandObjectPaths(copy);
+                result.data[destIndex] = lib.extendDeepNoArrays(result.data[destIndex] || {}, expandedObj);
+            }
+        }
+    }
+
+    return result;
+};
+
+},{"./coerce":94,"./dates":95,"./extend":97,"./is_plain_object":101,"./loggers":102,"./matrix":103,"./nested_property":104,"./notifier":105,"./search":108,"./stats":110,"d3":8}],101:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -26186,7 +26509,7 @@ function badContainer(container, propStr, propParts) {
     };
 }
 
-},{"fast-isnumeric":12}],105:[function(require,module,exports){
+},{"fast-isnumeric":11}],105:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -26263,7 +26586,7 @@ module.exports = function(text, displayLength) {
         });
 };
 
-},{"d3":10,"fast-isnumeric":12}],106:[function(require,module,exports){
+},{"d3":8,"fast-isnumeric":11}],106:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -26826,7 +27149,7 @@ exports.roundUp = function(val, arrayIn, reverse) {
     return arrayIn[low];
 };
 
-},{"../lib":100,"fast-isnumeric":12}],109:[function(require,module,exports){
+},{"../lib":100,"fast-isnumeric":11}],109:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -26945,7 +27268,7 @@ exports.interp = function(arr, n) {
     return frac * arr[Math.ceil(n)] + (1 - frac) * arr[Math.floor(n)];
 };
 
-},{"fast-isnumeric":12}],111:[function(require,module,exports){
+},{"fast-isnumeric":11}],111:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -27472,7 +27795,7 @@ exports.makeEditable = function(context, _delegate, options) {
     return d3.rebind(this, dispatch, 'on');
 };
 
-},{"../constants/string_mappings":89,"../constants/xmlns_namespaces":90,"../lib":100,"d3":10}],112:[function(require,module,exports){
+},{"../constants/string_mappings":89,"../constants/xmlns_namespaces":90,"../lib":100,"d3":8}],112:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -27508,7 +27831,7 @@ topojsonUtils.getTopojsonFeatures = function(trace, topojson) {
     return topojsonFeature(topojson, obj).features;
 };
 
-},{"../plots/geo/constants":141,"topojson":15}],113:[function(require,module,exports){
+},{"../plots/geo/constants":142,"topojson":15}],113:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -27519,6 +27842,7 @@ topojsonUtils.getTopojsonFeatures = function(trace, topojson) {
 
 
 'use strict';
+
 
 var d3 = require('d3');
 var m4FromQuat = require('gl-mat4/fromQuat');
@@ -28366,13 +28690,17 @@ Plotly.newPlot = function(gd, data, layout, config) {
     return Plotly.plot(gd, data, layout, config);
 };
 
-function doCalcdata(gd) {
+function doCalcdata(gd, traces) {
     var axList = Plotly.Axes.list(gd),
         fullData = gd._fullData,
         fullLayout = gd._fullLayout,
         i;
 
-    var calcdata = gd.calcdata = new Array(fullData.length);
+    // XXX: Is this correct? Needs a closer look so that *some* traces can be recomputed without
+    // *all* needing doCalcdata:
+    var calcdata = new Array(fullData.length);
+    var oldCalcdata = (gd.calcdata || []).slice(0);
+    gd.calcdata = calcdata;
 
     // extra helper variables
     // firstscatter: fill-to-next on the first trace goes to zero
@@ -28396,9 +28724,23 @@ function doCalcdata(gd) {
     }
 
     for(i = 0; i < fullData.length; i++) {
+        // If traces were specified and this trace was not included, then transfer it over from
+        // the old calcdata:
+        if(Array.isArray(traces) && traces.indexOf(i) === -1) {
+            calcdata[i] = oldCalcdata[i];
+            continue;
+        }
+
         var trace = fullData[i],
             _module = trace._module,
             cd = [];
+
+        // If traces were specified and this trace was not included, then transfer it over from
+        // the old calcdata:
+        if(Array.isArray(traces) && traces.indexOf(i) === -1) {
+            calcdata[i] = oldCalcdata[i];
+            continue;
+        }
 
         if(_module && trace.visible === true) {
             if(_module.calc) cd = _module.calc(gd, trace);
@@ -30011,6 +30353,345 @@ Plotly.relayout = function relayout(gd, astr, val) {
 };
 
 /**
+ * Transition to a set of new data and layout properties
+ *
+ * @param {string id or DOM element} gd
+ *      the id or DOM element of the graph container div
+ */
+Plotly.transition = function(gd, data, layout, traceIndices, transitionConfig) {
+    gd = getGraphDiv(gd);
+
+    var i, traceIdx;
+    var fullLayout = gd._fullLayout;
+
+    transitionConfig = Lib.extendFlat({
+        ease: 'cubic-in-out',
+        duration: 500,
+        delay: 0,
+        cascade: 0
+    }, transitionConfig || {});
+
+    // Create a single transition to be passed around:
+    if(transitionConfig.duration > 0) {
+        gd._currentTransition = d3.transition()
+            .duration(transitionConfig.duration)
+            .delay(transitionConfig.delay)
+            .ease(transitionConfig.ease);
+    } else {
+        gd._currentTransition = null;
+    }
+
+    var dataLength = Array.isArray(data) ? data.length : 0;
+
+    // Select which traces will be updated:
+    if(isNumeric(traceIndices)) traceIndices = [traceIndices];
+    else if(!Array.isArray(traceIndices) || !traceIndices.length) {
+        traceIndices = gd._fullData.map(function(v, i) {return i;});
+    }
+
+    if(traceIndices.length > dataLength) {
+        traceIndices = traceIndices.slice(0, dataLength);
+    }
+
+    var transitionedTraces = [];
+
+    function prepareTransitions() {
+        var plotinfo, i;
+        for(i = 0; i < traceIndices.length; i++) {
+            var traceIdx = traceIndices[i];
+            var trace = gd._fullData[traceIdx];
+            var module = trace._module;
+
+            if(!module || !module.animatable) {
+                continue;
+            }
+
+            transitionedTraces.push(traceIdx);
+
+            // This is a multi-step process. First clone w/o arrays so that
+            // we're not modifying the original:
+            var update = Lib.extendDeepNoArrays({}, data[i]);
+
+            // Then expand object paths since we don't obey object-overwrite
+            // semantics here:
+            update = Lib.expandObjectPaths(update);
+
+            // Finally apply the update (without copying arrays, of course):
+            Lib.extendDeepNoArrays(gd.data[traceIndices[i]], update);
+        }
+
+        // Supply defaults after applying the incoming properties. Note that any attempt
+        // to simplify this step and reduce the amount of work resulted in the reconstruction
+        // of essentially the whole supplyDefaults step, so that it seems sensible to just use
+        // supplyDefaults even though it's heavier than would otherwise be desired for
+        // transitions:
+        Plots.supplyDefaults(gd);
+
+        //Plotly.Axes.saveRangeInitial(gd, true);
+
+        // This step fies the .xaxis and .yaxis references that otherwise
+        // aren't updated by the supplyDefaults step:
+        var subplots = Plotly.Axes.getSubplots(gd);
+        for(i = 0; i < subplots.length; i++) {
+            plotinfo = gd._fullLayout._plots[subplots[i]];
+            plotinfo.xaxis = plotinfo.x();
+            plotinfo.yaxis = plotinfo.y();
+        }
+
+        doCalcdata(gd);
+
+        ErrorBars.calc(gd);
+    }
+
+    function executeCallbacks(list) {
+        var p = Promise.resolve();
+        if (!list) return p;
+        while(list.length) {
+            p = p.then((list.shift()));
+        }
+        return p;
+    }
+
+    function flushCallbacks(list) {
+        if (!list) return;
+        while(list.length) {
+            list.shift();
+        }
+    }
+
+    var restyleList = [];
+    function executeTransitions() {
+        var hasTraceTransition = false;
+        var j;
+        var basePlotModules = fullLayout._basePlotModules;
+        for(j = 0; j < basePlotModules.length; j++) {
+            if(basePlotModules[j].animatable) {
+                hasTraceTransition = true;
+            }
+            basePlotModules[j].plot(gd, transitionedTraces, transitionConfig);
+        }
+
+        var hasAxisTransition = false;
+
+        if(layout) {
+            for(j = 0; j < basePlotModules.length; j++) {
+                if(basePlotModules[j].transitionAxes) {
+                    var newLayout = Lib.expandObjectPaths(layout);
+                    hasAxisTransition = hasAxisTransition || basePlotModules[j].transitionAxes(gd, newLayout, transitionConfig);
+                }
+            }
+        }
+
+        gd._transitionData._completionTimeout = setTimeout(completeTransition, transitionConfig.duration);
+
+        if(!hasAxisTransition && !hasTraceTransition) {
+            return false;
+        }
+    }
+
+    function completeTransition() {
+        flushCallbacks(gd._transitionData._interruptCallbacks);
+
+        gd.emit('plotly_endtransition', []);
+
+        return executeCallbacks(gd._transitionData._cleanupCallbacks);
+    }
+
+    function interruptPreviousTransitions() {
+        if (gd._transitionData._completionTimeout) {
+            // Prevent the previous completion from occurring:
+            clearTimeout(gd._transitionData._completionTimeout);
+            gd._transitionData._completionTimeout = null;
+
+            // Interrupt an event to indicate that a transition was running:
+            gd.emit('plotly_interrupttransition', []);
+        }
+
+        flushCallbacks(gd._transitionData._cleanupCallbacks);
+        return executeCallbacks(gd._transitionData._interruptCallbacks);
+    }
+
+    for(i = 0; i < traceIndices.length; i++) {
+        traceIdx = traceIndices[i];
+        var contFull = gd._fullData[traceIdx];
+        var module = contFull._module;
+
+        if(!module) continue;
+
+        if(!module.animatable) {
+            var thisUpdate = {};
+
+            for(var ai in data[i]) {
+                thisUpdate[ai] = [data[i][ai]];
+            }
+
+            /*restyleList.push((function(md, data, traces) {
+                return function() {
+                    return Plotly.restyle(gd, data, traces);
+                };
+            }(module, thisUpdate, [traceIdx])));*/
+        }
+    }
+
+    var seq = [Plots.previousPromises, interruptPreviousTransitions, prepareTransitions, executeTransitions];
+    //seq = seq.concat(restyleList);
+
+    var plotDone = Lib.syncOrAsync(seq, gd);
+
+    if(!plotDone || !plotDone.then) plotDone = Promise.resolve();
+
+    return plotDone.then(function() {
+        gd.emit('plotly_begintransition', []);
+        return gd;
+    });
+};
+
+/**
+ * Animate to a keyframe
+ *
+ * @param {string} name
+ *      name of the keyframe to create
+ * @param {object} transitionConfig
+ *      configuration for transition
+ */
+Plotly.animate = function(gd, frameName, transitionConfig) {
+    gd = getGraphDiv(gd);
+
+    if(!gd._transitionData._frameHash[frameName]) {
+        Lib.warn('animateToFrame failure: keyframe does not exist', frameName);
+        return Promise.reject();
+    }
+
+    var computedFrame = Plots.computeFrame(gd, frameName);
+
+    return Plotly.transition(gd,
+        computedFrame.data,
+        computedFrame.layout,
+        computedFrame.traceIndices,
+        transitionConfig
+    );
+};
+
+/**
+ * Create new keyframes
+ *
+ * @param {array of objects} frameList
+ *      list of frame definitions, in which each object includes any of:
+ *      - name: {string} name of keyframe to add
+ *      - data: {array of objects} trace data
+ *      - layout {object} layout definition
+ *      - traces {array} trace indices
+ *      - baseFrame {string} name of keyframe from which this keyframe gets defaults
+ */
+Plotly.addFrames = function(gd, frameList, indices) {
+    gd = getGraphDiv(gd);
+
+    var i, frame, j, idx;
+    var _frames = gd._transitionData._frames;
+    var _hash = gd._transitionData._frameHash;
+
+
+    if(!Array.isArray(frameList)) {
+        Lib.warn('addFrames failure: frameList must be an Array of frame definitions', frameList);
+        return Promise.reject();
+    }
+
+    // Create a sorted list of insertions since we run into lots of problems if these
+    // aren't in ascending order of index:
+    //
+    // Strictly for sorting. Make sure this is guaranteed to never collide with any
+    // already-exisisting indices:
+    var bigIndex = _frames.length + frameList.length * 2;
+
+    var insertions = [];
+    for(i = frameList.length - 1; i >= 0; i--) {
+        insertions.push({
+            frame: frameList[i],
+            index: (indices && indices[i] !== undefined && indices[i] !== null) ? indices[i] : bigIndex + i
+        });
+    }
+
+    // Sort this, taking note that undefined insertions end up at the end:
+    insertions.sort(function(a, b) {
+        if(a.index > b.index) return -1;
+        if(a.index < b.index) return 1;
+        return 0;
+    });
+
+    var ops = [];
+    var revops = [];
+    var frameCount = _frames.length;
+
+    for(i = insertions.length - 1; i >= 0; i--) {
+        frame = insertions[i].frame;
+
+        if(!frame.name) {
+            // Repeatedly assign a default name, incrementing the counter each time until
+            // we get a name that's not in the hashed lookup table:
+            while(_hash[(frame.name = 'frame ' + gd._transitionData._counter++)]);
+        }
+
+        if(_hash[frame.name]) {
+            // If frame is present, overwrite its definition:
+            for(j = 0; j < _frames.length; j++) {
+                if(_frames[j].name === frame.name) break;
+            }
+            ops.push({type: 'replace', index: j, value: frame});
+            revops.unshift({type: 'replace', index: j, value: _frames[j]});
+        } else {
+            // Otherwise insert it at the end of the list:
+            idx = Math.max(0, Math.min(insertions[i].index, frameCount));
+
+            ops.push({type: 'insert', index: idx, value: frame});
+            revops.unshift({type: 'delete', index: idx});
+            frameCount++;
+        }
+    }
+
+    var undoFunc = Plots.modifyFrames,
+        redoFunc = Plots.modifyFrames,
+        undoArgs = [gd, revops],
+        redoArgs = [gd, ops];
+
+    if(Queue) Queue.add(gd, undoFunc, undoArgs, redoFunc, redoArgs);
+
+    return Plots.modifyFrames(gd, ops);
+};
+
+/**
+ * Delete keyframes
+ *
+ * @param {array of integers} frameList
+ *      list of integer indices of frames to be deleted
+ */
+Plotly.deleteFrames = function(gd, frameList) {
+    gd = getGraphDiv(gd);
+
+    var i, idx;
+    var _frames = gd._transitionData._frames;
+    var ops = [];
+    var revops = [];
+
+    frameList = frameList.slice(0);
+    frameList.sort();
+
+    for(i = frameList.length - 1; i >= 0; i--) {
+        idx = frameList[i];
+        ops.push({type: 'delete', index: idx});
+        revops.unshift({type: 'insert', index: idx, value: _frames[idx]});
+    }
+
+    var undoFunc = Plots.modifyFrames,
+        redoFunc = Plots.modifyFrames,
+        undoArgs = [gd, revops],
+        redoArgs = [gd, ops];
+
+    if(Queue) Queue.add(gd, undoFunc, undoArgs, redoFunc, redoArgs);
+
+    return Plots.modifyFrames(gd, ops);
+};
+
+/**
  * Purge a graph container div back to its initial pre-Plotly.plot state
  *
  * @param {string id or DOM element} gd
@@ -30623,7 +31304,7 @@ function drawMainTitle(gd) {
     });
 }
 
-},{"../components/color":20,"../components/drawing":43,"../components/errorbars":49,"../components/images":55,"../components/legend":63,"../components/modebar/manage":67,"../components/rangeselector":74,"../components/rangeslider":79,"../components/shapes":82,"../components/titles":83,"../components/updatemenus":88,"../constants/xmlns_namespaces":90,"../lib":100,"../lib/events":96,"../lib/queue":107,"../plotly":119,"../plots/cartesian/graph_interact":129,"../plots/plots":154,"d3":10,"fast-isnumeric":12,"gl-mat4/fromQuat":13}],114:[function(require,module,exports){
+},{"../components/color":20,"../components/drawing":43,"../components/errorbars":49,"../components/images":55,"../components/legend":63,"../components/modebar/manage":67,"../components/rangeselector":74,"../components/rangeslider":79,"../components/shapes":82,"../components/titles":83,"../components/updatemenus":88,"../constants/xmlns_namespaces":90,"../lib":100,"../lib/events":96,"../lib/queue":107,"../plotly":119,"../plots/cartesian/graph_interact":129,"../plots/plots":155,"d3":8,"fast-isnumeric":11,"gl-mat4/fromQuat":12}],114:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -31072,7 +31753,7 @@ function handleLinkedToArray(layoutAttributes) {
     PlotSchema.crawl(layoutAttributes, callback);
 }
 
-},{"../lib":100,"../plotly":119,"../plots/plots":154,"../plots/polar/area_attributes":155,"../plots/polar/axis_attributes":156}],116:[function(require,module,exports){
+},{"../lib":100,"../plotly":119,"../plots/plots":155,"../plots/polar/area_attributes":156,"../plots/polar/axis_attributes":157}],116:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -31211,7 +31892,7 @@ function toImage(gd, opts) {
 
 module.exports = toImage;
 
-},{"../lib":100,"../plotly":119,"../snapshot":164,"fast-isnumeric":12}],118:[function(require,module,exports){
+},{"../lib":100,"../plotly":119,"../snapshot":165,"fast-isnumeric":11}],118:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -31581,7 +32262,7 @@ function convertPathToAttributeString(path) {
     return astr;
 }
 
-},{"../lib":100,"../plots/plots":154,"./plot_schema":115}],119:[function(require,module,exports){
+},{"../lib":100,"../plots/plots":155,"./plot_schema":115}],119:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -31699,7 +32380,7 @@ exports.PlotSchema = require('./plot_api/plot_schema');
 // imaging routines
 exports.Snapshot = require('./snapshot');
 
-},{"../build/plotcss":1,"./components/annotations":18,"./components/color":20,"./components/colorbar":25,"./components/colorscale":34,"./components/drawing":43,"./components/errorbars":49,"./components/images":55,"./components/legend":63,"./components/modebar":66,"./components/shapes":82,"./components/updatemenus":88,"./fonts/mathjax_config":92,"./lib":100,"./lib/queue":107,"./lib/svg_text_utils":111,"./plot_api/plot_api":113,"./plot_api/plot_config":114,"./plot_api/plot_schema":115,"./plots/cartesian/axes":122,"./plots/cartesian/graph_interact":129,"./plots/plots":154,"./plots/polar/micropolar":157,"./snapshot":164,"./traces/scatter":186,"es6-promise":11}],120:[function(require,module,exports){
+},{"../build/plotcss":1,"./components/annotations":18,"./components/color":20,"./components/colorbar":25,"./components/colorscale":34,"./components/drawing":43,"./components/errorbars":49,"./components/images":55,"./components/legend":63,"./components/modebar":66,"./components/shapes":82,"./components/updatemenus":88,"./fonts/mathjax_config":92,"./lib":100,"./lib/queue":107,"./lib/svg_text_utils":111,"./plot_api/plot_api":113,"./plot_api/plot_config":114,"./plot_api/plot_schema":115,"./plots/cartesian/axes":122,"./plots/cartesian/graph_interact":129,"./plots/plots":155,"./plots/polar/micropolar":158,"./snapshot":165,"./traces/scatter":187,"es6-promise":9}],120:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -33831,7 +34512,7 @@ function swapAxisAttrs(layout, key, xFullAxes, yFullAxes) {
 // rather than built-in % which gives a negative value for negative v
 function mod(v, d) { return ((v % d) + d) % d; }
 
-},{"../../components/color":20,"../../components/drawing":43,"../../components/titles":83,"../../lib":100,"../../lib/svg_text_utils":111,"../../plotly":119,"./axis_ids":124,"./layout_attributes":131,"./layout_defaults":132,"./set_convert":136,"d3":10,"fast-isnumeric":12}],123:[function(require,module,exports){
+},{"../../components/color":20,"../../components/drawing":43,"../../components/titles":83,"../../lib":100,"../../lib/svg_text_utils":111,"../../plotly":119,"./axis_ids":124,"./layout_attributes":131,"./layout_defaults":132,"./set_convert":136,"d3":8,"fast-isnumeric":11}],123:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -34114,7 +34795,7 @@ function category(a) {
     return curvecats > curvenums * 2;
 }
 
-},{"../../components/color/attributes":19,"../../lib":100,"../plots":154,"./axis_ids":124,"./category_order_defaults":125,"./clean_datum":126,"./layout_attributes":131,"./ordered_categories":133,"./set_convert":136,"./tick_label_defaults":137,"./tick_mark_defaults":138,"./tick_value_defaults":139,"fast-isnumeric":12,"tinycolor2":14}],124:[function(require,module,exports){
+},{"../../components/color/attributes":19,"../../lib":100,"../plots":155,"./axis_ids":124,"./category_order_defaults":125,"./clean_datum":126,"./layout_attributes":131,"./ordered_categories":133,"./set_convert":136,"./tick_label_defaults":137,"./tick_mark_defaults":138,"./tick_value_defaults":139,"fast-isnumeric":11,"tinycolor2":14}],124:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -34235,7 +34916,7 @@ exports.getFromTrace = function(gd, fullTrace, type) {
     return ax;
 };
 
-},{"../../lib":100,"../plots":154,"./constants":127}],125:[function(require,module,exports){
+},{"../../lib":100,"../plots":155,"./constants":127}],125:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -34308,7 +34989,7 @@ module.exports = function cleanDatum(c) {
     return c;
 };
 
-},{"../../lib":100,"fast-isnumeric":12}],127:[function(require,module,exports){
+},{"../../lib":100,"fast-isnumeric":11}],127:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -34546,6 +35227,28 @@ module.exports = function dragBox(gd, plotinfo, x, y, w, h, ns, ew) {
         zb,
         corners;
 
+    function recomputeAxisLists() {
+        xa = [plotinfo.x()];
+        ya = [plotinfo.y()];
+        pw = xa[0]._length;
+        ph = ya[0]._length;
+
+        for(var i = 1; i < subplots.length; i++) {
+            var subplotXa = subplots[i].x(),
+                subplotYa = subplots[i].y();
+            if(xa.indexOf(subplotXa) === -1) xa.push(subplotXa);
+            if(ya.indexOf(subplotYa) === -1) ya.push(subplotYa);
+        }
+        allaxes = xa.concat(ya);
+        xActive = isDirectionActive(xa, ew);
+        yActive = isDirectionActive(ya, ns);
+        cursor = getDragCursor(yActive + xActive, fullLayout.dragmode);
+        xs = plotinfo.x()._offset;
+        ys = plotinfo.y()._offset;
+        dragOptions.xa = xa;
+        dragOptions.ya = ya;
+    }
+
     function zoomPrep(e, startX, startY) {
         var dragBBox = dragger.getBoundingClientRect();
         x0 = startX - dragBBox.left;
@@ -34746,6 +35449,7 @@ module.exports = function dragBox(gd, plotinfo, x, y, w, h, ns, ew) {
             fullLayout._plots[plotinfo.mainplot] : plotinfo;
 
     function zoomWheel(e) {
+        recomputeAxisLists();
         // deactivate mousewheel scrolling on embedded graphs
         // devs can override this with layout._enablescrollzoom,
         // but _ ensures this setting won't leave their page
@@ -34821,6 +35525,8 @@ module.exports = function dragBox(gd, plotinfo, x, y, w, h, ns, ew) {
 
     // plotDrag: move the plot in response to a drag
     function plotDrag(dx, dy) {
+        recomputeAxisLists();
+
         function dragAxList(axList, pix) {
             for(var i = 0; i < axList.length; i++) {
                 var axi = axList[i];
@@ -34991,6 +35697,7 @@ module.exports = function dragBox(gd, plotinfo, x, y, w, h, ns, ew) {
     // affected by this drag, and update them. look for all plots
     // sharing an affected axis (including the one being dragged)
     function updateSubplots(viewBox) {
+        var j;
         var plotinfos = fullLayout._plots,
             subplots = Object.keys(plotinfos);
 
@@ -34999,9 +35706,30 @@ module.exports = function dragBox(gd, plotinfo, x, y, w, h, ns, ew) {
             var subplot = plotinfos[subplots[i]],
                 xa2 = subplot.x(),
                 ya2 = subplot.y(),
-                editX = ew && xa.indexOf(xa2) !== -1 && !xa2.fixedrange,
-                editY = ns && ya.indexOf(ya2) !== -1 && !ya2.fixedrange;
+                editX = ew && !xa2.fixedrange,
+                editY = ns && !ya2.fixedrange;
 
+            if(editX) {
+                var isInX = false;
+                for(j = 0; j < xa.length; j++) {
+                    if(xa[j]._id === xa2._id) {
+                        isInX = true;
+                        break;
+                    }
+                }
+                editX = editX && isInX;
+            }
+
+            if(editY) {
+                var isInY = false;
+                for(j = 0; j < ya.length; j++) {
+                    if(ya[j]._id === ya2._id) {
+                        isInY = true;
+                        break;
+                    }
+                }
+                editY = editY && isInY;
+            }
 
             var xScaleFactor = editX ? xa2._length / viewBox[2] : 1,
                 yScaleFactor = editY ? ya2._length / viewBox[3] : 1;
@@ -35075,7 +35803,7 @@ function isSelectOrLasso(dragmode) {
     return modes.indexOf(dragmode) !== -1;
 }
 
-},{"../../components/color":20,"../../components/dragelement":41,"../../components/drawing":43,"../../lib":100,"../../lib/setcursor":109,"../../lib/svg_text_utils":111,"../../plotly":119,"./axes":122,"./constants":127,"./select":135,"d3":10,"tinycolor2":14}],129:[function(require,module,exports){
+},{"../../components/color":20,"../../components/dragelement":41,"../../components/drawing":43,"../../lib":100,"../../lib/setcursor":109,"../../lib/svg_text_utils":111,"../../plotly":119,"./axes":122,"./constants":127,"./select":135,"d3":8,"tinycolor2":14}],129:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -36417,7 +37145,7 @@ fx.inbox = function(v0, v1) {
     return Infinity;
 };
 
-},{"../../components/color":20,"../../components/dragelement":41,"../../components/drawing":43,"../../lib":100,"../../lib/events":96,"../../lib/svg_text_utils":111,"./axes":122,"./constants":127,"./dragbox":128,"d3":10,"fast-isnumeric":12,"tinycolor2":14}],130:[function(require,module,exports){
+},{"../../components/color":20,"../../components/dragelement":41,"../../components/drawing":43,"../../lib":100,"../../lib/events":96,"../../lib/svg_text_utils":111,"./axes":122,"./constants":127,"./dragbox":128,"d3":8,"fast-isnumeric":11,"tinycolor2":14}],130:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -36445,66 +37173,93 @@ exports.attrRegex = constants.attrRegex;
 
 exports.attributes = require('./attributes');
 
-exports.plot = function(gd) {
+exports.transitionAxes = require('./transition_axes');
+
+exports.plot = function(gd, traces, transitionOpts) {
+    var cdSubplot, cd, trace, i, j, k;
+
     var fullLayout = gd._fullLayout,
         subplots = Plots.getSubplotIds(fullLayout, 'cartesian'),
         calcdata = gd.calcdata,
         modules = fullLayout._modules;
 
-    function getCdSubplot(calcdata, subplot) {
-        var cdSubplot = [];
-
-        for(var i = 0; i < calcdata.length; i++) {
-            var cd = calcdata[i];
-            var trace = cd[0].trace;
-
-            if(trace.xaxis + trace.yaxis === subplot) {
-                cdSubplot.push(cd);
-            }
+    if(!Array.isArray(traces)) {
+      // If traces is not provided, then it's a complete replot and missing
+      // traces are removed
+        traces = [];
+        for(i = 0; i < calcdata.length; i++) {
+            traces.push(i);
         }
-
-        return cdSubplot;
     }
 
-    function getCdModule(cdSubplot, _module) {
-        var cdModule = [];
-
-        for(var i = 0; i < cdSubplot.length; i++) {
-            var cd = cdSubplot[i];
-            var trace = cd[0].trace;
-
-            if((trace._module === _module) && (trace.visible === true)) {
-                cdModule.push(cd);
-            }
-        }
-
-        return cdModule;
-    }
-
-    for(var i = 0; i < subplots.length; i++) {
+    for(i = 0; i < subplots.length; i++) {
         var subplot = subplots[i],
-            subplotInfo = fullLayout._plots[subplot],
-            cdSubplot = getCdSubplot(calcdata, subplot);
+            subplotInfo = fullLayout._plots[subplot];
+
+        // Get all calcdata for this subplot:
+        cdSubplot = [];
+        var pcd;
+        for(j = 0; j < calcdata.length; j++) {
+            cd = calcdata[j];
+            trace = cd[0].trace;
+
+            // Skip trace if whitelist provided and it's not whitelisted:
+            // if (Array.isArray(traces) && traces.indexOf(i) === -1) continue;
+            if(trace.xaxis + trace.yaxis === subplot) {
+                // If this trace is specifically requested, add it to the list:
+                if(traces.indexOf(trace.index) !== -1) {
+                    // Okay, so example: traces 0, 1, and 2 have fill = tonext. You animate
+                    // traces 0 and 2. Trace 1 also needs to be updated, otherwise its fill
+                    // is outdated. So this retroactively adds the previous trace if the
+                    // traces are interdependent.
+                    if(pcd &&
+                            ['tonextx', 'tonexty', 'tonext'].indexOf(trace.fill) !== -1 &&
+                            cdSubplot.indexOf(pcd) === -1) {
+                        cdSubplot.push(pcd);
+                    }
+
+                    cdSubplot.push(cd);
+                }
+
+                // Track the previous trace on this subplot for the retroactive-add step
+                // above:
+                pcd = cd;
+            }
+        }
 
         // remove old traces, then redraw everything
-        // TODO: use enter/exit appropriately in the plot functions
-        // so we don't need this - should sometimes be a big speedup
-        if(subplotInfo.plot) subplotInfo.plot.selectAll('g.trace').remove();
+        // TODO: scatterlayer is manually excluded from this since it knows how
+        // to update instead of fully removing and redrawing every time. The
+        // remaining plot traces should also be able to do this. Once implemented,
+        // we won't need this - which should sometimes be a big speedup.
+        if(subplotInfo.plot) {
+            subplotInfo.plot.selectAll('g:not(.scatterlayer)').selectAll('g.trace').remove();
+        }
 
-        for(var j = 0; j < modules.length; j++) {
+        // Plot all traces for each module at once:
+        for(j = 0; j < modules.length; j++) {
             var _module = modules[j];
 
             // skip over non-cartesian trace modules
             if(_module.basePlotModule.name !== 'cartesian') continue;
 
             // plot all traces of this type on this subplot at once
-            var cdModule = getCdModule(cdSubplot, _module);
-            _module.plot(gd, subplotInfo, cdModule);
+            var cdModule = [];
+            for(k = 0; k < cdSubplot.length; k++) {
+                cd = cdSubplot[k];
+                trace = cd[0].trace;
+
+                if((trace._module === _module) && (trace.visible === true)) {
+                    cdModule.push(cd);
+                }
+            }
+
+            _module.plot(gd, subplotInfo, cdModule, transitionOpts);
         }
     }
 };
 
-},{"../plots":154,"./attributes":121,"./constants":127}],131:[function(require,module,exports){
+},{"../plots":155,"./attributes":121,"./constants":127,"./transition_axes":140}],131:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -36849,7 +37604,7 @@ module.exports = {
     }
 };
 
-},{"../../components/color/attributes":19,"../../components/rangeselector/attributes":68,"../../components/rangeslider/attributes":75,"../../lib/extend":97,"../font_attributes":140,"./constants":127}],132:[function(require,module,exports){
+},{"../../components/color/attributes":19,"../../components/rangeselector/attributes":68,"../../components/rangeslider/attributes":75,"../../lib/extend":97,"../font_attributes":141,"./constants":127}],132:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -37022,7 +37777,7 @@ module.exports = function supplyLayoutDefaults(layoutIn, layoutOut, fullData) {
     });
 };
 
-},{"../../components/color":20,"../../components/rangeselector":74,"../../components/rangeslider":79,"../../lib":100,"../plots":154,"./axis_defaults":123,"./axis_ids":124,"./constants":127,"./layout_attributes":131,"./position_defaults":134}],133:[function(require,module,exports){
+},{"../../components/color":20,"../../components/rangeselector":74,"../../components/rangeslider":79,"../../lib":100,"../plots":155,"./axis_defaults":123,"./axis_ids":124,"./constants":127,"./layout_attributes":131,"./position_defaults":134}],133:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -37101,7 +37856,7 @@ module.exports = function orderedCategories(axisLetter, categoryorder, categorya
     }
 };
 
-},{"d3":10}],134:[function(require,module,exports){
+},{"d3":8}],134:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -37166,7 +37921,7 @@ module.exports = function handlePositionDefaults(containerIn, containerOut, coer
     return containerOut;
 };
 
-},{"../../lib":100,"fast-isnumeric":12}],135:[function(require,module,exports){
+},{"../../lib":100,"fast-isnumeric":11}],135:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -37433,7 +38188,7 @@ module.exports = function setConvert(ax) {
     ax.p2d = function(v) { return ax.l2d(ax.p2l(v)); };
 
     // set scaling to pixels
-    ax.setScale = function() {
+    ax.setScale = function(usePrivateRange) {
         var gs = ax._gd._fullLayout._size,
             i;
 
@@ -37447,23 +38202,29 @@ module.exports = function setConvert(ax) {
             ax.domain = ax2.domain;
         }
 
+        // While transitions are occuring, occurring, we get a double-transform
+        // issue if we transform the drawn layer *and* use the new axis range to
+        // draw the data. This allows us to construct setConvert using the pre-
+        // interaction values of the range:
+        var range = (usePrivateRange && ax._r) ? ax._r : ax.range;
+
         // make sure we have a range (linearized data values)
         // and that it stays away from the limits of javascript numbers
-        if(!ax.range || ax.range.length !== 2 || ax.range[0] === ax.range[1]) {
-            ax.range = [-1, 1];
+        if(!range || range.length !== 2 || range[0] === range[1]) {
+            range = [-1, 1];
         }
         for(i = 0; i < 2; i++) {
-            if(!isNumeric(ax.range[i])) {
-                ax.range[i] = isNumeric(ax.range[1 - i]) ?
-                    (ax.range[1 - i] * (i ? 10 : 0.1)) :
+            if(!isNumeric(range[i])) {
+                range[i] = isNumeric(range[1 - i]) ?
+                    (range[1 - i] * (i ? 10 : 0.1)) :
                     (i ? 1 : -1);
             }
 
-            if(ax.range[i] < -(Number.MAX_VALUE / 2)) {
-                ax.range[i] = -(Number.MAX_VALUE / 2);
+            if(range[i] < -(Number.MAX_VALUE / 2)) {
+                range[i] = -(Number.MAX_VALUE / 2);
             }
-            else if(ax.range[i] > Number.MAX_VALUE / 2) {
-                ax.range[i] = Number.MAX_VALUE / 2;
+            else if(range[i] > Number.MAX_VALUE / 2) {
+                range[i] = Number.MAX_VALUE / 2;
             }
 
         }
@@ -37471,14 +38232,14 @@ module.exports = function setConvert(ax) {
         if(ax._id.charAt(0) === 'y') {
             ax._offset = gs.t + (1 - ax.domain[1]) * gs.h;
             ax._length = gs.h * (ax.domain[1] - ax.domain[0]);
-            ax._m = ax._length / (ax.range[0] - ax.range[1]);
-            ax._b = -ax._m * ax.range[1];
+            ax._m = ax._length / (range[0] - range[1]);
+            ax._b = -ax._m * range[1];
         }
         else {
             ax._offset = gs.l + ax.domain[0] * gs.w;
             ax._length = gs.w * (ax.domain[1] - ax.domain[0]);
-            ax._m = ax._length / (ax.range[1] - ax.range[0]);
-            ax._b = -ax._m * ax.range[0];
+            ax._m = ax._length / (range[1] - range[0]);
+            ax._b = -ax._m * range[0];
         }
 
         if(!isFinite(ax._m) || !isFinite(ax._b)) {
@@ -37610,7 +38371,7 @@ module.exports = function setConvert(ax) {
     ax._forceTick0 = null;
 };
 
-},{"../../lib":100,"./axis_ids":124,"./clean_datum":126,"./constants":127,"d3":10,"fast-isnumeric":12}],137:[function(require,module,exports){
+},{"../../lib":100,"./axis_ids":124,"./clean_datum":126,"./constants":127,"d3":8,"fast-isnumeric":11}],137:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -37767,7 +38528,313 @@ module.exports = function handleTickValueDefaults(containerIn, containerOut, coe
     }
 };
 
-},{"fast-isnumeric":12}],140:[function(require,module,exports){
+},{"fast-isnumeric":11}],140:[function(require,module,exports){
+/**
+* Copyright 2012-2016, Plotly, Inc.
+* All rights reserved.
+*
+* This source code is licensed under the MIT license found in the
+* LICENSE file in the root directory of this source tree.
+*/
+
+
+'use strict';
+
+var d3 = require('d3');
+
+var Plotly = require('../../plotly');
+var Lib = require('../../lib');
+var Axes = require('./axes');
+var axisRegex = /((x|y)([2-9]|[1-9][0-9]+)?)axis$/;
+
+module.exports = function transitionAxes(gd, newLayout, transitionConfig) {
+    var fullLayout = gd._fullLayout;
+    var axes = [];
+
+    function computeUpdates(layout) {
+        var ai, attrList, match, axis, update;
+        var updates = {};
+
+        for(ai in layout) {
+            attrList = ai.split('.');
+            match = attrList[0].match(axisRegex);
+            if(match) {
+                var axisLetter = match[1];
+                var axisName = axisLetter + 'axis';
+                axis = fullLayout[axisName];
+                update = {};
+
+                if(Array.isArray(layout[ai])) {
+                    update.to = layout[ai].slice(0);
+                } else {
+                    if(Array.isArray(layout[ai].range)) {
+                        update.to = layout[ai].range.slice(0);
+                    }
+                }
+                if(!update.to) continue;
+
+                update.axisName = axisName;
+                update.length = axis._length;
+
+                axes.push(axisLetter);
+
+                updates[axisLetter] = update;
+            }
+        }
+
+        return updates;
+    }
+
+    function computeAffectedSubplots(fullLayout, updatedAxisIds, updates) {
+        var plotName;
+        var plotinfos = fullLayout._plots;
+        var affectedSubplots = [];
+        var toX, toY;
+
+        for(plotName in plotinfos) {
+            var plotinfo = plotinfos[plotName];
+
+            if(affectedSubplots.indexOf(plotinfo) !== -1) continue;
+
+            var x = plotinfo.xaxis._id;
+            var y = plotinfo.yaxis._id;
+            var fromX = plotinfo.xaxis.range;
+            var fromY = plotinfo.yaxis.range;
+
+            // Store the initial range at the beginning of this transition:
+            plotinfo.xaxis._r = plotinfo.xaxis.range.slice();
+            plotinfo.yaxis._r = plotinfo.yaxis.range.slice();
+
+            if(updates[x]) {
+                toX = updates[x].to;
+            } else {
+                toX = fromX;
+            }
+            if(updates[y]) {
+                toY = updates[y].to;
+            } else {
+                toY = fromY;
+            }
+
+            if(fromX[0] === toX[0] && fromX[1] === toX[1] && fromY[0] === toY[0] && fromY[1] === toY[1]) continue;
+
+            if(updatedAxisIds.indexOf(x) !== -1 || updatedAxisIds.indexOf(y) !== -1) {
+                affectedSubplots.push(plotinfo);
+            }
+        }
+
+        return affectedSubplots;
+    }
+
+    var updates = computeUpdates(newLayout);
+    var updatedAxisIds = Object.keys(updates);
+    var affectedSubplots = computeAffectedSubplots(fullLayout, updatedAxisIds, updates);
+
+    if(!affectedSubplots.length) {
+        return false;
+    }
+
+    function ticksAndAnnotations(xa, ya) {
+        var activeAxIds = [],
+            i;
+
+        activeAxIds = [xa._id, ya._id];
+
+        for(i = 0; i < activeAxIds.length; i++) {
+            Axes.doTicks(gd, activeAxIds[i], true);
+        }
+
+        function redrawObjs(objArray, module) {
+            var obji;
+            for(i = 0; i < objArray.length; i++) {
+                obji = objArray[i];
+                if((activeAxIds.indexOf(obji.xref) !== -1) ||
+                    (activeAxIds.indexOf(obji.yref) !== -1)) {
+                    module.draw(gd, i);
+                }
+            }
+        }
+
+        redrawObjs(fullLayout.annotations || [], Plotly.Annotations);
+        redrawObjs(fullLayout.shapes || [], Plotly.Shapes);
+        redrawObjs(fullLayout.images || [], Plotly.Images);
+    }
+
+    function unsetSubplotTransform(subplot) {
+        var xa2 = subplot.x();
+        var ya2 = subplot.y();
+
+        fullLayout._defs.selectAll('#' + subplot.clipId)
+            .call(Lib.setTranslate, 0, 0)
+            .call(Lib.setScale, 1, 1);
+
+        subplot.plot
+            .call(Lib.setTranslate, xa2._offset, ya2._offset)
+            .call(Lib.setScale, 1, 1)
+
+            // This is specifically directed at scatter traces, applying an inverse
+            // scale to individual points to counteract the scale of the trace
+            // as a whole:
+            .selectAll('.points').selectAll('.point')
+                .call(Lib.setPointGroupScale, 1, 1);
+
+    }
+
+    function updateSubplot(subplot, progress) {
+        var axis, r0, r1;
+        var xUpdate = updates[subplot.xaxis._id];
+        var yUpdate = updates[subplot.yaxis._id];
+
+        var viewBox = [];
+
+        if(xUpdate) {
+            axis = gd._fullLayout[xUpdate.axisName];
+            r0 = axis._r;
+            r1 = xUpdate.to;
+            viewBox[0] = (r0[0] * (1 - progress) + progress * r1[0] - r0[0]) / (r0[1] - r0[0]) * subplot.xaxis._length;
+            var dx1 = r0[1] - r0[0];
+            var dx2 = r1[1] - r1[0];
+
+            axis.range[0] = r0[0] * (1 - progress) + progress * r1[0];
+            axis.range[1] = r0[1] * (1 - progress) + progress * r1[1];
+
+            viewBox[2] = subplot.xaxis._length * ((1 - progress) + progress * dx2 / dx1);
+        } else {
+            viewBox[0] = 0;
+            viewBox[2] = subplot.xaxis._length;
+        }
+
+        if(yUpdate) {
+            axis = gd._fullLayout[yUpdate.axisName];
+            r0 = axis._r;
+            r1 = yUpdate.to;
+            viewBox[1] = (r0[1] * (1 - progress) + progress * r1[1] - r0[1]) / (r0[0] - r0[1]) * subplot.yaxis._length;
+            var dy1 = r0[1] - r0[0];
+            var dy2 = r1[1] - r1[0];
+
+            axis.range[0] = r0[0] * (1 - progress) + progress * r1[0];
+            axis.range[1] = r0[1] * (1 - progress) + progress * r1[1];
+
+            viewBox[3] = subplot.yaxis._length * ((1 - progress) + progress * dy2 / dy1);
+        } else {
+            viewBox[1] = 0;
+            viewBox[3] = subplot.yaxis._length;
+        }
+
+        ticksAndAnnotations(subplot.x(), subplot.y());
+
+
+        var xa2 = subplot.x();
+        var ya2 = subplot.y();
+
+        var editX = !!xUpdate;
+        var editY = !!yUpdate;
+
+        var xScaleFactor = editX ? xa2._length / viewBox[2] : 1,
+            yScaleFactor = editY ? ya2._length / viewBox[3] : 1;
+
+        var clipDx = editX ? viewBox[0] : 0,
+            clipDy = editY ? viewBox[1] : 0;
+
+        var fracDx = editX ? (viewBox[0] / viewBox[2] * xa2._length) : 0,
+            fracDy = editY ? (viewBox[1] / viewBox[3] * ya2._length) : 0;
+
+        var plotDx = xa2._offset - fracDx,
+            plotDy = ya2._offset - fracDy;
+
+        fullLayout._defs.selectAll('#' + subplot.clipId)
+            .call(Lib.setTranslate, clipDx, clipDy)
+            .call(Lib.setScale, 1 / xScaleFactor, 1 / yScaleFactor);
+
+        subplot.plot
+            .call(Lib.setTranslate, plotDx, plotDy)
+            .call(Lib.setScale, xScaleFactor, yScaleFactor)
+
+            // This is specifically directed at scatter traces, applying an inverse
+            // scale to individual points to counteract the scale of the trace
+            // as a whole:
+            .selectAll('.points').selectAll('.point')
+                .call(Lib.setPointGroupScale, 1 / xScaleFactor, 1 / yScaleFactor);
+
+    }
+
+
+    function transitionComplete() {
+        var attrs = {};
+        for(var i = 0; i < updatedAxisIds.length; i++) {
+            var axi = gd._fullLayout[updates[updatedAxisIds[i]].axisName];
+            var to = updates[updatedAxisIds[i]].to;
+            attrs[axi._name + '.range[0]'] = to[0];
+            attrs[axi._name + '.range[1]'] = to[1];
+
+            axi.range = to.slice();
+        }
+
+        return Plotly.relayout(gd, attrs).then(function () {
+            for(var i = 0; i < affectedSubplots.length; i++) {
+                unsetSubplotTransform(affectedSubplots[i]);
+            }
+
+        });
+    }
+
+    function transitionTail() {
+        var attrs = {};
+        for(var i = 0; i < updatedAxisIds.length; i++) {
+            var axi = gd._fullLayout[updatedAxisIds[i] + 'axis'];
+            attrs[axi._name + '.range[0]'] = axi.range[0];
+            attrs[axi._name + '.range[1]'] = axi.range[1];
+
+            axi.range = axi._r.slice();
+        }
+
+        return Plotly.relayout(gd, attrs).then(function() {
+            for(var i = 0; i < affectedSubplots.length; i++) {
+                unsetSubplotTransform(affectedSubplots[i]);
+            }
+        });
+    }
+
+    var easeFn = d3.ease(transitionConfig.ease);
+
+    gd._transitionData._interruptCallbacks.push(function() {
+        cancelAnimationFrame(raf);
+        raf = null;
+        return transitionTail();
+    });
+
+    gd._transitionData._cleanupCallbacks.push(function () {
+        cancelAnimationFrame(raf);
+        raf = null;
+        return transitionComplete();
+    });
+
+    var t1, t2, raf;
+
+    function doFrame() {
+        t2 = Date.now();
+
+        var tInterp = Math.min(1, (t2 - t1) / transitionConfig.duration);
+        var progress = easeFn(tInterp);
+
+        for(var i = 0; i < affectedSubplots.length; i++) {
+            updateSubplot(affectedSubplots[i], progress);
+        }
+
+        if(t2 - t1 > transitionConfig.duration) {
+            raf = cancelAnimationFrame(doFrame);
+        } else {
+            raf = requestAnimationFrame(doFrame);
+        }
+    }
+
+    t1 = Date.now();
+    raf = requestAnimationFrame(doFrame);
+
+    return Promise.resolve();
+};
+
+},{"../../lib":100,"../../plotly":119,"./axes":122,"d3":8}],141:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -37798,7 +38865,7 @@ module.exports = {
     }
 };
 
-},{}],141:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -37956,7 +39023,7 @@ params.layerNameToAdjective = {
 // base layers drawn over choropleth
 params.baseLayersOverChoropleth = ['rivers', 'lakes'];
 
-},{}],142:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -38450,7 +39517,7 @@ function createMockAxis(fullLayout) {
     return mockAxis;
 }
 
-},{"../../components/color":20,"../../components/drawing":43,"../../constants/xmlns_namespaces":90,"../../lib/filter_visible":98,"../../lib/topojson_utils":112,"../../plots/cartesian/axes":122,"./constants":141,"./projections":149,"./set_scale":150,"./zoom":151,"./zoom_reset":152,"d3":10,"topojson":15}],143:[function(require,module,exports){
+},{"../../components/color":20,"../../components/drawing":43,"../../constants/xmlns_namespaces":90,"../../lib/filter_visible":98,"../../lib/topojson_utils":112,"../../plots/cartesian/axes":122,"./constants":142,"./projections":150,"./set_scale":151,"./zoom":152,"./zoom_reset":153,"d3":8,"topojson":15}],144:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -38556,7 +39623,7 @@ exports.toSVG = function(gd) {
     }
 };
 
-},{"../../plots/plots":154,"./geo":142,"./layout/attributes":144,"./layout/defaults":147,"./layout/layout_attributes":148}],144:[function(require,module,exports){
+},{"../../plots/plots":155,"./geo":143,"./layout/attributes":145,"./layout/defaults":148,"./layout/layout_attributes":149}],145:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -38577,7 +39644,7 @@ module.exports = {
     }
 };
 
-},{}],145:[function(require,module,exports){
+},{}],146:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -38632,7 +39699,7 @@ module.exports = {
     }
 };
 
-},{"../../../components/color/attributes":19}],146:[function(require,module,exports){
+},{"../../../components/color/attributes":19}],147:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -38706,7 +39773,7 @@ module.exports = function supplyGeoAxisLayoutDefaults(geoLayoutIn, geoLayoutOut)
     }
 };
 
-},{"../../../lib":100,"../constants":141,"./axis_attributes":145}],147:[function(require,module,exports){
+},{"../../../lib":100,"../constants":142,"./axis_attributes":146}],148:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -38825,7 +39892,7 @@ function handleGeoDefaults(geoLayoutIn, geoLayoutOut, coerce) {
     ];
 }
 
-},{"../../subplot_defaults":160,"../constants":141,"./axis_defaults":146,"./layout_attributes":148}],148:[function(require,module,exports){
+},{"../../subplot_defaults":161,"../constants":142,"./axis_defaults":147,"./layout_attributes":149}],149:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -39058,7 +40125,7 @@ module.exports = {
     lataxis: geoAxesAttrs
 };
 
-},{"../../../components/color/attributes":19,"../constants":141,"./axis_attributes":145}],149:[function(require,module,exports){
+},{"../../../components/color/attributes":19,"../constants":142,"./axis_attributes":146}],150:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -39504,7 +40571,7 @@ function addProjectionsToD3(d3) {
 
 module.exports = addProjectionsToD3;
 
-},{}],150:[function(require,module,exports){
+},{}],151:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -39655,7 +40722,7 @@ function getBounds(projection, rangeBox) {
     return d3.geo.path().projection(projection).bounds(rangeBox);
 }
 
-},{"./constants":141,"d3":10}],151:[function(require,module,exports){
+},{"./constants":142,"d3":8}],152:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -40082,7 +41149,7 @@ function d3_eventDispatch(target) {
     return dispatch;
 }
 
-},{"d3":10}],152:[function(require,module,exports){
+},{"d3":8}],153:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -40117,7 +41184,7 @@ function createGeoZoomReset(geo, geoLayout) {
 
 module.exports = createGeoZoomReset;
 
-},{"../cartesian/graph_interact":129}],153:[function(require,module,exports){
+},{"../cartesian/graph_interact":129}],154:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -40282,7 +41349,7 @@ module.exports = {
     }
 };
 
-},{"../components/color/attributes":19,"../plotly":119,"./font_attributes":140}],154:[function(require,module,exports){
+},{"../components/color/attributes":19,"../plotly":119,"./font_attributes":141}],155:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -40811,6 +41878,40 @@ plots.supplyDefaults = function(gd) {
             (gd.calcdata[i][0] || {}).trace = trace;
         }
     }
+
+    // Create all the storage space for frames, but only if doesn't already
+    // exist:
+    if(!gd._transitionData) {
+        plots.createTransitionData(gd);
+    }
+};
+
+// Create storage for all of the data related to frames and transitions:
+plots.createTransitionData = function(gd) {
+    // Set up the default keyframe if it doesn't exist:
+    if(!gd._transitionData) {
+        gd._transitionData = {};
+    }
+
+    if(!gd._transitionData._frames) {
+        gd._transitionData._frames = [];
+    }
+
+    if(!gd._transitionData._frameHash) {
+        gd._transitionData._frameHash = {};
+    }
+
+    if(!gd._transitionData._counter) {
+        gd._transitionData._counter = 0;
+    }
+
+    if(!gd._transitionData._cleanupCallbacks) {
+        gd._transitionData._cleanupCallbacks = [];
+    }
+
+    if(!gd._transitionData._interruptCallbacks) {
+        gd._transitionData._interruptCallbacks = [];
+    }
 };
 
 // helper function to be bound to fullLayout to check
@@ -40853,12 +41954,17 @@ plots.cleanPlot = function(newFullData, newFullLayout, oldFullData, oldFullLayou
             if(oldUid === newTrace.uid) continue oldLoop;
         }
 
-        // clean old heatmap and contour traces
+        // clean old heatmap, contour, and scatter traces
+        //
+        // Note: This is also how scatter traces (cartesian and scatterternary) get
+        // removed since otherwise the scatter module is not called (and so the join
+        // doesn't register the removal) if scatter traces disappear entirely.
         if(hasPaper) {
             oldFullLayout._paper.selectAll(
                 '.hm' + oldUid +
                 ',.contour' + oldUid +
-                ',#clip' + oldUid
+                ',#clip' + oldUid +
+                ',.trace' + oldUid
             ).remove();
         }
 
@@ -40918,6 +42024,9 @@ plots.supplyDataDefaults = function(dataIn, dataOut, layout) {
     var modules = layout._modules = [],
         basePlotModules = layout._basePlotModules = [],
         cnt = 0;
+
+    // Make this idempotent by emptying the existing array:
+    dataOut.length = 0;
 
     function pushModule(fullTrace) {
         dataOut.push(fullTrace);
@@ -41208,6 +42317,7 @@ plots.purge = function(gd) {
     delete gd.numboxes;
     delete gd._hoverTimer;
     delete gd._lastHoverTime;
+    delete gd._transitionData;
 
     // remove all event listeners
     if(gd.removeAllListeners) gd.removeAllListeners();
@@ -41473,7 +42583,72 @@ plots.graphJson = function(gd, dataonly, mode, output, useDefaults) {
     return (output === 'object') ? obj : JSON.stringify(obj);
 };
 
-},{"../components/color":20,"../lib":100,"../plotly":119,"./attributes":120,"./font_attributes":140,"./layout_attributes":153,"d3":10,"fast-isnumeric":12}],155:[function(require,module,exports){
+/**
+ * Modify a keyframe using a list of operations:
+ *
+ * @param {array of objects} operations
+ *      Sequence of operations to be performed on the keyframes
+ */
+plots.modifyFrames = function(gd, operations) {
+    var i, op, frame;
+    var _frames = gd._transitionData._frames;
+    var _hash = gd._transitionData._frameHash;
+
+    for(i = 0; i < operations.length; i++) {
+        op = operations[i];
+
+        switch(op.type) {
+            // No reason this couldn't exist, but is currently unused/untested:
+            /*case 'rename':
+                frame = _frames[op.index];
+                delete _hash[frame.name];
+                _hash[op.name] = frame;
+                frame.name = op.name;
+                break;*/
+            case 'replace':
+                frame = op.value;
+                var oldName = _frames[op.index].name;
+                var newName = frame.name;
+                _frames[op.index] = _hash[newName] = frame;
+
+                if(newName !== oldName) {
+                    // If name has changed in addition to replacement, then update
+                    // the lookup table:
+                    delete _hash[oldName];
+                    _hash[newName] = frame;
+                }
+
+                break;
+            case 'insert':
+                frame = op.value;
+                _hash[frame.name] = frame;
+                _frames.splice(op.index, 0, frame);
+                break;
+            case 'delete':
+                frame = _frames[op.index];
+                delete _hash[frame.name];
+                _frames.splice(op.index, 1);
+                break;
+        }
+    }
+
+    return Promise.resolve();
+};
+
+/*
+ * Compute a keyframe. Merge a keyframe into its base frame(s) and
+ * expand properties.
+ *
+ * @param {string} frame
+ *      The name of the keyframe to be computed
+ *
+ * Returns: a new object with the merged content
+ */
+plots.computeFrame = function(gd, frameName) {
+    return Lib.computeFrame(gd._transitionData._frameHash, frameName);
+};
+
+},{"../components/color":20,"../lib":100,"../plotly":119,"./attributes":120,"./font_attributes":141,"./layout_attributes":154,"d3":8,"fast-isnumeric":11}],156:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -41498,7 +42673,7 @@ module.exports = {
     }
 };
 
-},{"../../traces/scatter/attributes":176}],156:[function(require,module,exports){
+},{"../../traces/scatter/attributes":177}],157:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -41613,7 +42788,7 @@ module.exports = {
     }
 };
 
-},{"../../lib/extend":97,"../cartesian/layout_attributes":131}],157:[function(require,module,exports){
+},{"../../lib/extend":97,"../cartesian/layout_attributes":131}],158:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43036,7 +44211,7 @@ var extendDeepAll = Plotly.Lib.extendDeepAll;
     return exports;
 };
 
-},{"../../plotly":119,"./micropolar_manager":158,"d3":10}],158:[function(require,module,exports){
+},{"../../plotly":119,"./micropolar_manager":159,"d3":8}],159:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43119,7 +44294,7 @@ manager.fillLayout = function(_gd) {
     _gd._fullLayout = extendDeepAll(dflts, _gd.layout);
 };
 
-},{"../../plotly":119,"./undo_manager":159,"d3":10}],159:[function(require,module,exports){
+},{"../../plotly":119,"./undo_manager":160,"d3":8}],160:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43185,7 +44360,7 @@ module.exports = function UndoManager() {
     };
 };
 
-},{}],160:[function(require,module,exports){
+},{}],161:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43260,7 +44435,7 @@ module.exports = function handleSubplotDefaults(layoutIn, layoutOut, fullData, o
     }
 };
 
-},{"../lib":100,"./plots":154}],161:[function(require,module,exports){
+},{"../lib":100,"./plots":155}],162:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43416,7 +44591,7 @@ module.exports = function clonePlot(graphObj, options) {
     return plotTile;
 };
 
-},{"../plotly":119}],162:[function(require,module,exports){
+},{"../plotly":119}],163:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43482,7 +44657,7 @@ function downloadImage(gd, opts) {
 
 module.exports = downloadImage;
 
-},{"../lib":100,"../plot_api/to_image":117,"./filesaver":163}],163:[function(require,module,exports){
+},{"../lib":100,"../plot_api/to_image":117,"./filesaver":164}],164:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43550,7 +44725,7 @@ var fileSaver = function(url, name) {
 
 module.exports = fileSaver;
 
-},{}],164:[function(require,module,exports){
+},{}],165:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43595,7 +44770,7 @@ var Snapshot = {
 
 module.exports = Snapshot;
 
-},{"./cloneplot":161,"./download":162,"./svgtoimg":165,"./toimage":166,"./tosvg":167}],165:[function(require,module,exports){
+},{"./cloneplot":162,"./download":163,"./svgtoimg":166,"./toimage":167,"./tosvg":168}],166:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43726,7 +44901,7 @@ function svgToImg(opts) {
 
 module.exports = svgToImg;
 
-},{"../lib":100,"events":7}],166:[function(require,module,exports){
+},{"../lib":100,"events":10}],167:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43805,7 +44980,7 @@ function toImage(gd, opts) {
 
 module.exports = toImage;
 
-},{"../lib":100,"../plotly":119,"events":7}],167:[function(require,module,exports){
+},{"../lib":100,"../plotly":119,"events":10}],168:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43917,7 +45092,7 @@ module.exports = function toSVG(gd, format) {
     return s;
 };
 
-},{"../components/color":20,"../components/drawing":43,"../constants/xmlns_namespaces":90,"../lib/svg_text_utils":111,"d3":10}],168:[function(require,module,exports){
+},{"../components/color":20,"../components/drawing":43,"../constants/xmlns_namespaces":90,"../lib/svg_text_utils":111,"d3":8}],169:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43965,7 +45140,7 @@ module.exports = extendFlat({}, {
     colorscaleAttrs
 );
 
-},{"../../components/colorscale/attributes":26,"../../lib/extend":97,"../../plots/attributes":120,"../scattergeo/attributes":198}],169:[function(require,module,exports){
+},{"../../components/colorscale/attributes":26,"../../lib/extend":97,"../../plots/attributes":120,"../scattergeo/attributes":200}],170:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -43984,7 +45159,7 @@ module.exports = function calc(gd, trace) {
     colorscaleCalc(trace, trace.z, '', 'z');
 };
 
-},{"../../components/colorscale/calc":27}],170:[function(require,module,exports){
+},{"../../components/colorscale/calc":27}],171:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44039,7 +45214,7 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
     coerce('hoverinfo', (layout._dataLength === 1) ? 'location+z+text' : undefined);
 };
 
-},{"../../components/colorscale/defaults":30,"../../lib":100,"./attributes":168}],171:[function(require,module,exports){
+},{"../../components/colorscale/defaults":30,"../../lib":100,"./attributes":169}],172:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44069,7 +45244,7 @@ Choropleth.meta = {
 
 module.exports = Choropleth;
 
-},{"../../plots/geo":143,"../heatmap/colorbar":173,"./attributes":168,"./calc":169,"./defaults":170,"./plot":172}],172:[function(require,module,exports){
+},{"../../plots/geo":144,"../heatmap/colorbar":174,"./attributes":169,"./calc":170,"./defaults":171,"./plot":173}],173:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44290,7 +45465,7 @@ function makeEventDataFunc(trace) {
     };
 }
 
-},{"../../components/color":20,"../../components/colorscale/get_scale":32,"../../components/colorscale/make_scale_function":37,"../../components/drawing":43,"../../lib/array_to_calc_item":93,"../../lib/geo_location_utils":99,"../../lib/topojson_utils":112,"../../plots/cartesian/axes":122,"../../plots/cartesian/graph_interact":129,"../../plots/geo/constants":141,"./attributes":168,"d3":10}],173:[function(require,module,exports){
+},{"../../components/color":20,"../../components/colorscale/get_scale":32,"../../components/colorscale/make_scale_function":37,"../../components/drawing":43,"../../lib/array_to_calc_item":93,"../../lib/geo_location_utils":99,"../../lib/topojson_utils":112,"../../plots/cartesian/axes":122,"../../plots/cartesian/graph_interact":129,"../../plots/geo/constants":142,"./attributes":169,"d3":8}],174:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44336,7 +45511,7 @@ module.exports = function colorbar(gd, cd) {
         .options(trace.colorbar)();
 };
 
-},{"../../components/colorbar/draw":23,"../../components/colorscale/get_scale":32,"../../lib":100,"../../plots/plots":154,"d3":10,"fast-isnumeric":12}],174:[function(require,module,exports){
+},{"../../components/colorbar/draw":23,"../../components/colorscale/get_scale":32,"../../lib":100,"../../plots/plots":155,"d3":8,"fast-isnumeric":11}],175:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44363,7 +45538,7 @@ module.exports = function styleOne(s, pt, trace) {
     .call(Color.stroke, lineColor);
 };
 
-},{"../../components/color":20}],175:[function(require,module,exports){
+},{"../../components/color":20}],176:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44401,7 +45576,7 @@ module.exports = function arraysToCalcdata(cd) {
     }
 };
 
-},{"../../lib":100}],176:[function(require,module,exports){
+},{"../../lib":100}],177:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44451,6 +45626,10 @@ module.exports = {
         valType: 'number',
         dflt: 1,
         
+        
+    },
+    identifier: {
+        valType: 'data_array',
         
     },
     text: {
@@ -44509,6 +45688,12 @@ module.exports = {
             // dash lengths in px, and it will be honored
             values: ['solid', 'dot', 'dash', 'longdash', 'dashdot', 'longdashdot'],
             dflt: 'solid',
+            
+            
+        },
+        simplify: {
+            valType: 'boolean',
+            dflt: true,
             
             
         }
@@ -44651,7 +45836,7 @@ module.exports = {
     }
 };
 
-},{"../../components/colorscale/color_attributes":28,"../../components/drawing":43,"../../lib/extend":97,"./constants":181}],177:[function(require,module,exports){
+},{"../../components/colorscale/color_attributes":28,"../../components/drawing":43,"../../lib/extend":97,"./constants":182}],178:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44769,6 +45954,10 @@ module.exports = function calc(gd, trace) {
     for(i = 0; i < serieslen; i++) {
         cd[i] = (isNumeric(x[i]) && isNumeric(y[i])) ?
             {x: x[i], y: y[i]} : {x: false, y: false};
+
+        if(trace.identifier && trace.identifier[i] !== undefined) {
+            cd[i].identifier = trace.identifier[i];
+        }
     }
 
     // this has migrated up from arraysToCalcdata as we have a reference to 's' here
@@ -44778,7 +45967,7 @@ module.exports = function calc(gd, trace) {
     return cd;
 };
 
-},{"../../lib":100,"../../plots/cartesian/axes":122,"./colorscale_calc":180,"./subtypes":195,"fast-isnumeric":12}],178:[function(require,module,exports){
+},{"../../lib":100,"../../plots/cartesian/axes":122,"./colorscale_calc":181,"./subtypes":197,"fast-isnumeric":11}],179:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44819,7 +46008,7 @@ module.exports = function cleanData(fullData) {
     }
 };
 
-},{}],179:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44872,7 +46061,7 @@ module.exports = function colorbar(gd, cd) {
         .options(marker.colorbar)();
 };
 
-},{"../../components/colorbar/draw":23,"../../components/colorscale/get_scale":32,"../../lib":100,"../../plots/plots":154,"d3":10,"fast-isnumeric":12}],180:[function(require,module,exports){
+},{"../../components/colorbar/draw":23,"../../components/colorscale/get_scale":32,"../../lib":100,"../../plots/plots":155,"d3":8,"fast-isnumeric":11}],181:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44905,7 +46094,7 @@ module.exports = function calcMarkerColorscale(trace) {
     }
 };
 
-},{"../../components/colorscale/calc":27,"../../components/colorscale/has_colorscale":33,"./subtypes":195}],181:[function(require,module,exports){
+},{"../../components/colorscale/calc":27,"../../components/colorscale/has_colorscale":33,"./subtypes":197}],182:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44921,7 +46110,7 @@ module.exports = {
     PTS_LINESONLY: 20
 };
 
-},{}],182:[function(require,module,exports){
+},{}],183:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -44962,11 +46151,13 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
 
     coerce('text');
     coerce('mode', defaultMode);
+    coerce('identifier');
 
     if(subTypes.hasLines(traceOut)) {
         handleLineDefaults(traceIn, traceOut, defaultColor, layout, coerce);
         handleLineShapeDefaults(traceIn, traceOut, coerce);
         coerce('connectgaps');
+        coerce('line.simplify');
     }
 
     if(subTypes.hasMarkers(traceOut)) {
@@ -44999,7 +46190,7 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
     errorBarsSupplyDefaults(traceIn, traceOut, defaultColor, {axis: 'x', inherit: 'y'});
 };
 
-},{"../../components/errorbars/defaults":48,"../../lib":100,"./attributes":176,"./constants":181,"./fillcolor_defaults":183,"./line_defaults":187,"./line_shape_defaults":189,"./marker_defaults":191,"./subtypes":195,"./text_defaults":196,"./xy_defaults":197}],183:[function(require,module,exports){
+},{"../../components/errorbars/defaults":48,"../../lib":100,"./attributes":177,"./constants":182,"./fillcolor_defaults":184,"./line_defaults":188,"./line_shape_defaults":190,"./marker_defaults":193,"./subtypes":197,"./text_defaults":198,"./xy_defaults":199}],184:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45038,7 +46229,7 @@ module.exports = function fillColorDefaults(traceIn, traceOut, defaultColor, coe
     ));
 };
 
-},{"../../components/color":20}],184:[function(require,module,exports){
+},{"../../components/color":20}],185:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45091,7 +46282,7 @@ module.exports = function getTraceColor(trace, di) {
     }
 };
 
-},{"../../components/color":20,"./subtypes":195}],185:[function(require,module,exports){
+},{"../../components/color":20,"./subtypes":197}],186:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45260,7 +46451,7 @@ module.exports = function hoverPoints(pointData, xval, yval, hovermode) {
     }
 };
 
-},{"../../components/color":20,"../../components/errorbars":49,"../../lib":100,"../../plots/cartesian/constants":127,"../../plots/cartesian/graph_interact":129,"./get_trace_color":184}],186:[function(require,module,exports){
+},{"../../components/color":20,"../../components/errorbars":49,"../../lib":100,"../../plots/cartesian/constants":127,"../../plots/cartesian/graph_interact":129,"./get_trace_color":185}],187:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45292,6 +46483,7 @@ Scatter.colorbar = require('./colorbar');
 Scatter.style = require('./style');
 Scatter.hoverPoints = require('./hover');
 Scatter.selectPoints = require('./select');
+Scatter.animatable = true;
 
 Scatter.moduleType = 'trace';
 Scatter.name = 'scatter';
@@ -45303,7 +46495,7 @@ Scatter.meta = {
 
 module.exports = Scatter;
 
-},{"../../plots/cartesian":130,"./arrays_to_calcdata":175,"./attributes":176,"./calc":177,"./clean_data":178,"./colorbar":179,"./defaults":182,"./hover":185,"./plot":192,"./select":193,"./style":194,"./subtypes":195}],187:[function(require,module,exports){
+},{"../../plots/cartesian":130,"./arrays_to_calcdata":176,"./attributes":177,"./calc":178,"./clean_data":179,"./colorbar":180,"./defaults":183,"./hover":186,"./plot":194,"./select":195,"./style":196,"./subtypes":197}],188:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45336,7 +46528,7 @@ module.exports = function lineDefaults(traceIn, traceOut, defaultColor, layout, 
     coerce('line.dash');
 };
 
-},{"../../components/colorscale/defaults":30,"../../components/colorscale/has_colorscale":33}],188:[function(require,module,exports){
+},{"../../components/colorscale/defaults":30,"../../components/colorscale/has_colorscale":33}],189:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45354,6 +46546,7 @@ var Axes = require('../../plots/cartesian/axes');
 module.exports = function linePoints(d, opts) {
     var xa = opts.xaxis,
         ya = opts.yaxis,
+        simplify = opts.simplify,
         connectGaps = opts.connectGaps,
         baseTolerance = opts.baseTolerance,
         linear = opts.linear,
@@ -45386,6 +46579,10 @@ module.exports = function linePoints(d, opts) {
         clusterMinDeviation,
         clusterMaxDeviation,
         thisDeviation;
+
+    if(!simplify) {
+        baseTolerance = minTolerance = -1;
+    }
 
     // turn one calcdata point into pixel coordinates
     function getPt(index) {
@@ -45505,7 +46702,7 @@ module.exports = function linePoints(d, opts) {
     return segments;
 };
 
-},{"../../plots/cartesian/axes":122}],189:[function(require,module,exports){
+},{"../../plots/cartesian/axes":122}],190:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45524,7 +46721,48 @@ module.exports = function handleLineShapeDefaults(traceIn, traceOut, coerce) {
     if(shape === 'spline') coerce('line.smoothing');
 };
 
-},{}],190:[function(require,module,exports){
+},{}],191:[function(require,module,exports){
+/**
+* Copyright 2012-2016, Plotly, Inc.
+* All rights reserved.
+*
+* This source code is licensed under the MIT license found in the
+* LICENSE file in the root directory of this source tree.
+*/
+
+'use strict';
+
+module.exports = function linkTraces(gd, plotinfo, cdscatter) {
+    var cd, trace;
+    var prevtrace = null;
+
+    for(var i = 0; i < cdscatter.length; ++i) {
+        cd = cdscatter[i];
+        trace = cd[0].trace;
+
+        // Note: The check which ensures all cdscatter here are for the same axis and
+        // are either cartesian or scatterternary has been removed. This code assumes
+        // the passed scattertraces have been filtered to the proper plot types and
+        // the proper subplots.
+        if(trace.visible === true) {
+            trace._nexttrace = null;
+
+            if(['tonextx', 'tonexty', 'tonext'].indexOf(trace.fill) !== -1) {
+                trace._prevtrace = prevtrace;
+
+                if(prevtrace) {
+                    prevtrace._nexttrace = trace;
+                }
+            }
+
+            prevtrace = trace;
+        } else {
+            trace._prevtrace = trace._nexttrace = null;
+        }
+    }
+};
+
+},{}],192:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45566,7 +46804,7 @@ module.exports = function makeBubbleSizeFn(trace) {
     };
 };
 
-},{"fast-isnumeric":12}],191:[function(require,module,exports){
+},{"fast-isnumeric":11}],193:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45626,7 +46864,7 @@ module.exports = function markerDefaults(traceIn, traceOut, defaultColor, layout
     }
 };
 
-},{"../../components/color":20,"../../components/colorscale/defaults":30,"../../components/colorscale/has_colorscale":33,"./subtypes":195}],192:[function(require,module,exports){
+},{"../../components/color":20,"../../components/colorscale/defaults":30,"../../components/colorscale/has_colorscale":33,"./subtypes":197}],194:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45644,80 +46882,178 @@ var Lib = require('../../lib');
 var Drawing = require('../../components/drawing');
 var ErrorBars = require('../../components/errorbars');
 
-var polygonTester = require('../../lib/polygon').tester;
-
 var subTypes = require('./subtypes');
 var arraysToCalcdata = require('./arrays_to_calcdata');
 var linePoints = require('./line_points');
+var linkTraces = require('./link_traces');
+var polygonTester = require('../../lib/polygon').tester;
 
+module.exports = function plot(gd, plotinfo, cdscatter, transitionConfig) {
+    var i, uids, selection, join;
 
-module.exports = function plot(gd, plotinfo, cdscatter) {
-    selectMarkers(gd, plotinfo, cdscatter);
+    var scatterlayer = plotinfo.plot.select('g.scatterlayer');
+
+    // If transition config is provided, then it is only a partial replot and traces not
+    // updated are removed.
+    var isFullReplot = !transitionConfig;
+
+    selection = scatterlayer.selectAll('g.trace');
+
+    join = selection.data(cdscatter, function(d) {return d[0].trace.uid;});
+
+    // Append new traces:
+    join.enter().append('g')
+        .attr('class', function(d) {
+            return 'trace scatter trace' + d[0].trace.uid;
+        })
+        .style('stroke-miterlimit', 2);
+
+    // After the elements are created but before they've been draw, we have to perform
+    // this extra step of linking the traces. This allows appending of fill layers so that
+    // the z-order of fill layers is correct.
+    linkTraces(gd, plotinfo, cdscatter);
+
+    createFills(gd, scatterlayer);
+
+    // Sort the traces, once created, so that the ordering is preserved even when traces
+    // are shown and hidden. This is needed since we're not just wiping everything out
+    // and recreating on every update.
+    for(i = 0, uids = []; i < cdscatter.length; i++) {
+        uids[i] = cdscatter[i][0].trace.uid;
+    }
+
+    scatterlayer.selectAll('g.trace').sort(function(a, b) {
+        var idx1 = uids.indexOf(a[0].trace.uid);
+        var idx2 = uids.indexOf(b[0].trace.uid);
+        return idx1 > idx2 ? 1 : -1;
+    });
+
+    // Must run the selection again since otherwise enters/updates get grouped together
+    // and these get executed out of order. Except we need them in order!
+    scatterlayer.selectAll('g.trace').each(function(d, i) {
+        plotOne(gd, i, plotinfo, d, cdscatter, this, transitionConfig);
+    });
+
+    if(isFullReplot) {
+        join.exit().remove();
+    }
+
+    // remove paths that didn't get used
+    scatterlayer.selectAll('path:not([d])').remove();
+};
+
+function createFills(gd, scatterlayer) {
+    var trace;
+
+    scatterlayer.selectAll('g.trace').each(function(d) {
+        var tr = d3.select(this);
+
+        // Loop only over the traces being redrawn:
+        trace = d[0].trace;
+
+        // make the fill-to-next path now for the NEXT trace, so it shows
+        // behind both lines.
+        if(trace._nexttrace) {
+            trace._nextFill = tr.select('.js-fill.js-tonext');
+            if(!trace._nextFill.size()) {
+
+                // If there is an existing tozero fill, we must insert this *after* that fill:
+                var loc = ':first-child';
+                if(tr.select('.js-fill.js-tozero').size()) {
+                    loc += ' + *';
+                }
+
+                trace._nextFill = tr.insert('path', loc).attr('class', 'js-fill js-tonext');
+            }
+        } else {
+            tr.selectAll('.js-fill.js-tonext').remove();
+            trace._nextFill = null;
+        }
+
+        if(trace.fill && (trace.fill.substr(0, 6) === 'tozero' || trace.fill === 'toself' ||
+                (trace.fill.substr(0, 2) === 'to' && !trace._prevtrace))) {
+            trace._ownFill = tr.select('.js-fill.js-tozero');
+            if(!trace._ownFill.size()) {
+                trace._ownFill = tr.insert('path', ':first-child').attr('class', 'js-fill js-tozero');
+            }
+        } else {
+            tr.selectAll('.js-fill.js-tozero').remove();
+            trace._ownFill = null;
+        }
+    });
+}
+
+function plotOne(gd, idx, plotinfo, cdscatter, cdscatterAll, element, transitionConfig) {
+    var join, i;
+
+    // Since this has been reorganized and we're executing this on individual traces,
+    // we need to pass it the full list of cdscatter as well as this trace's index (idx)
+    // since it does an internal n^2 loop over comparisons with other traces:
+    selectMarkers(gd, idx, plotinfo, cdscatter, cdscatterAll);
+
+    var hasTransition = !!transitionConfig && transitionConfig.duration > 0;
+
+    function transition(selection) {
+        if(hasTransition) {
+            return selection.transition()
+                .duration(transitionConfig.duration)
+                .delay(transitionConfig.delay)
+                .ease(transitionConfig.ease);
+        } else {
+            return selection;
+        }
+    }
 
     var xa = plotinfo.x(),
         ya = plotinfo.y();
 
-    // make the container for scatter plots
+    var trace = cdscatter[0].trace,
+        line = trace.line,
+        tr = d3.select(element);
+
     // (so error bars can find them along with bars)
-    var scattertraces = plotinfo.plot.select('.scatterlayer')
-        .selectAll('g.trace.scatter')
-        .data(cdscatter);
-
-    scattertraces.enter().append('g')
-        .attr('class', 'trace scatter')
-        .style('stroke-miterlimit', 2);
-
     // error bars are at the bottom
-    scattertraces.call(ErrorBars.plot, plotinfo);
+    tr.call(ErrorBars.plot, plotinfo, transitionConfig);
+
+    if(trace.visible !== true) return;
 
     // BUILD LINES AND FILLS
-    var prevpath = '',
-        prevPolygons = [],
-        ownFillEl3, ownFillDir, tonext, nexttonext;
+    var ownFillEl3, tonext;
+    var ownFillDir = trace.fill.charAt(trace.fill.length - 1);
+    if(ownFillDir !== 'x' && ownFillDir !== 'y') ownFillDir = '';
 
-    scattertraces.each(function(d) {
-        var trace = d[0].trace,
-            line = trace.line,
-            tr = d3.select(this);
-        if(trace.visible !== true) return;
+    // store node for tweaking by selectPoints
+    cdscatter[0].node3 = tr;
 
-        ownFillDir = trace.fill.charAt(trace.fill.length - 1);
-        if(ownFillDir !== 'x' && ownFillDir !== 'y') ownFillDir = '';
+    arraysToCalcdata(cdscatter);
 
-        d[0].node3 = tr; // store node for tweaking by selectPoints
+    var prevRevpath = '';
+    var prevPolygons = [];
+    var prevtrace = trace._prevtrace;
 
-        arraysToCalcdata(d);
+    if(prevtrace) {
+        prevRevpath = prevtrace._prevRevpath || '';
+        tonext = prevtrace._nextFill;
+        prevPolygons = prevtrace._polygons;
+    }
 
-        if(!subTypes.hasLines(trace) && trace.fill === 'none') return;
+    var thispath,
+        thisrevpath,
+        // fullpath is all paths for this curve, joined together straight
+        // across gaps, for filling
+        fullpath = '',
+        // revpath is fullpath reversed, for fill-to-next
+        revpath = '',
+        // functions for converting a point array to a path
+        pathfn, revpathbase, revpathfn;
 
-        var thispath,
-            thisrevpath,
-            // fullpath is all paths for this curve, joined together straight
-            // across gaps, for filling
-            fullpath = '',
-            // revpath is fullpath reversed, for fill-to-next
-            revpath = '',
-            // functions for converting a point array to a path
-            pathfn, revpathbase, revpathfn;
+    ownFillEl3 = trace._ownFill;
 
-        // make the fill-to-zero path now, so it shows behind the line
-        // fill to next puts the fill associated with one trace
-        // grouped with the previous
-        if(trace.fill.substr(0, 6) === 'tozero' || trace.fill === 'toself' ||
-                (trace.fill.substr(0, 2) === 'to' && !prevpath)) {
-            ownFillEl3 = tr.append('path')
-                .classed('js-fill', true);
+    if(subTypes.hasLines(trace) || trace.fill !== 'none') {
+        if(tonext) {
+            // This tells .style which trace to use for fill information:
+            tonext.datum(cdscatter);
         }
-        else ownFillEl3 = null;
-
-        // make the fill-to-next path now for the NEXT trace, so it shows
-        // behind both lines.
-        // nexttonext was created last time, but give it
-        // this curve's data for fill color
-        if(nexttonext) tonext = nexttonext.datum(d);
-
-        // now make a new nexttonext for next time
-        nexttonext = tr.append('path').classed('js-fill', true);
 
         if(['hv', 'vh', 'hvh', 'vhv'].indexOf(line.shape) !== -1) {
             pathfn = Drawing.steps(line.shape);
@@ -45749,32 +47085,38 @@ module.exports = function plot(gd, plotinfo, cdscatter) {
             return revpathbase(pts.reverse());
         };
 
-        var segments = linePoints(d, {
+        var segments = linePoints(cdscatter, {
             xaxis: xa,
             yaxis: ya,
             connectGaps: trace.connectgaps,
             baseTolerance: Math.max(line.width || 1, 3) / 4,
-            linear: line.shape === 'linear'
+            linear: line.shape === 'linear',
+            simplify: line.simplify
         });
 
         // since we already have the pixel segments here, use them to make
         // polygons for hover on fill
         // TODO: can we skip this if hoveron!=fills? That would mean we
         // need to redraw when you change hoveron...
-        var thisPolygons = trace._polygons = new Array(segments.length),
-            i;
-
+        var thisPolygons = trace._polygons = new Array(segments.length);
         for(i = 0; i < segments.length; i++) {
             trace._polygons[i] = polygonTester(segments[i]);
         }
 
-        if(segments.length) {
-            var pt0 = segments[0][0],
-                lastSegment = segments[segments.length - 1],
-                pt1 = lastSegment[lastSegment.length - 1];
+        var pt0, lastSegment, pt1;
 
-            for(i = 0; i < segments.length; i++) {
-                var pts = segments[i];
+        if(segments.length) {
+            pt0 = segments[0][0];
+            lastSegment = segments[segments.length - 1];
+            pt1 = lastSegment[lastSegment.length - 1];
+        }
+
+        var lineSegments = segments.filter(function(s) {
+            return s.length > 1;
+        });
+
+        var makeUpdate = function(isEnter) {
+            return function(pts) {
                 thispath = pathfn(pts);
                 thisrevpath = revpathfn(pts);
                 if(!fullpath) {
@@ -45789,13 +47131,41 @@ module.exports = function plot(gd, plotinfo, cdscatter) {
                     fullpath += 'Z' + thispath;
                     revpath = thisrevpath + 'Z' + revpath;
                 }
+
                 if(subTypes.hasLines(trace) && pts.length > 1) {
-                    tr.append('path')
-                        .classed('js-line', true)
-                        .style('vector-effect', 'non-scaling-stroke')
-                        .attr('d', thispath);
+                    var el = d3.select(this);
+
+                    // This makes the coloring work correctly:
+                    el.datum(cdscatter);
+
+                    if(isEnter) {
+                        transition(el.style('opacity', 0)
+                            .attr('d', thispath)
+                            .call(Drawing.lineGroupStyle))
+                                .style('opacity', 1);
+                    } else {
+                        transition(el).attr('d', thispath)
+                            .call(Drawing.lineGroupStyle);
+                    }
                 }
-            }
+            };
+        };
+
+        var lineJoin = tr.selectAll('.js-line').data(lineSegments);
+
+        transition(lineJoin.exit())
+            .style('opacity', 0)
+            .remove();
+
+        lineJoin.each(makeUpdate(false));
+
+        lineJoin.enter().append('path')
+            .classed('js-line', true)
+            .style('vector-effect', 'non-scaling-stroke')
+            .call(Drawing.lineGroupStyle)
+            .each(makeUpdate(true));
+
+        if(segments.length) {
             if(ownFillEl3) {
                 if(pt0 && pt1) {
                     if(ownFillDir) {
@@ -45808,20 +47178,24 @@ module.exports = function plot(gd, plotinfo, cdscatter) {
 
                         // fill to zero: full trace path, plus extension of
                         // the endpoints to the appropriate axis
-                        ownFillEl3.attr('d', fullpath + 'L' + pt1 + 'L' + pt0 + 'Z');
+                        // For the sake of animations, wrap the points around so that
+                        // the points on the axes are the first two points. Otherwise
+                        // animations get a little crazy if the number of points changes.
+                        transition(ownFillEl3).attr('d', 'M' + pt1 + 'L' + pt0 + 'L' + fullpath.substr(1));
+                    } else {
+                        // fill to self: just join the path to itself
+                        transition(ownFillEl3).attr('d', fullpath + 'Z');
                     }
-                    // fill to self: just join the path to itself
-                    else ownFillEl3.attr('d', fullpath + 'Z');
                 }
             }
-            else if(trace.fill.substr(0, 6) === 'tonext' && fullpath && prevpath) {
+            else if(trace.fill.substr(0, 6) === 'tonext' && fullpath && prevRevpath) {
                 // fill to next: full trace path, plus the previous path reversed
                 if(trace.fill === 'tonext') {
                     // tonext: for use by concentric shapes, like manually constructed
                     // contours, we just add the two paths closed on themselves.
                     // This makes strange results if one path is *not* entirely
                     // inside the other, but then that is a strange usage.
-                    tonext.attr('d', fullpath + 'Z' + prevpath + 'Z');
+                    transition(tonext).attr('d', fullpath + 'Z' + prevRevpath + 'Z');
                 }
                 else {
                     // tonextx/y: for now just connect endpoints with lines. This is
@@ -45829,97 +47203,142 @@ module.exports = function plot(gd, plotinfo, cdscatter) {
                     // y/x, but if they *aren't*, we should ideally do more complicated
                     // things depending on whether the new endpoint projects onto the
                     // existing curve or off the end of it
-                    tonext.attr('d', fullpath + 'L' + prevpath.substr(1) + 'Z');
+                    transition(tonext).attr('d', fullpath + 'L' + prevRevpath.substr(1) + 'Z');
                 }
                 trace._polygons = trace._polygons.concat(prevPolygons);
             }
-            prevpath = revpath;
-            prevPolygons = thisPolygons;
+            trace._prevRevpath = revpath;
+            trace._prevPolygons = thisPolygons;
         }
-    });
+    }
 
-    // remove paths that didn't get used
-    scattertraces.selectAll('path:not([d])').remove();
 
     function visFilter(d) {
         return d.filter(function(v) { return v.vis; });
     }
 
-    scattertraces.append('g')
-        .attr('class', 'points')
-        .each(function(d) {
-            var trace = d[0].trace,
-                s = d3.select(this),
-                showMarkers = subTypes.hasMarkers(trace),
-                showText = subTypes.hasText(trace);
+    function keyFunc(d) {
+        return d.identifier;
+    }
 
-            if((!showMarkers && !showText) || trace.visible !== true) s.remove();
-            else {
-                if(showMarkers) {
-                    s.selectAll('path.point')
-                        .data(trace.marker.maxdisplayed ? visFilter : Lib.identity)
-                        .enter().append('path')
-                            .classed('point', true)
-                            .call(Drawing.translatePoints, xa, ya);
-                }
-                if(showText) {
-                    s.selectAll('g')
-                        .data(trace.marker.maxdisplayed ? visFilter : Lib.identity)
-                        // each text needs to go in its own 'g' in case
-                        // it gets converted to mathjax
-                        .enter().append('g')
-                            .append('text')
-                            .call(Drawing.translatePoints, xa, ya);
+    // Returns a function if the trace is keyed, otherwise returns undefined
+    function getKeyFunc(trace) {
+        if(trace.identifier) {
+            return keyFunc;
+        }
+    }
+
+    function makePoints(d) {
+        var join, selection;
+        var trace = d[0].trace,
+            s = d3.select(this),
+            showMarkers = subTypes.hasMarkers(trace),
+            showText = subTypes.hasText(trace);
+
+        if((!showMarkers && !showText) || trace.visible !== true) s.remove();
+        else {
+            if(showMarkers) {
+                selection = s.selectAll('path.point');
+
+                join = selection
+                    .data(trace.marker.maxdisplayed ? visFilter : Lib.identity, getKeyFunc(trace));
+
+                join.enter().append('path')
+                    .classed('point', true)
+                    .call(Drawing.pointStyle, trace)
+                    .call(Drawing.translatePoints, xa, ya, trace, transitionConfig, 1);
+
+                join.transition()
+                    .call(Drawing.translatePoints, xa, ya, trace, transitionConfig, 0)
+                    .call(Drawing.pointStyle, trace);
+
+                if(hasTransition) {
+                    join.exit()
+                        .call(Drawing.translatePoints, xa, ya, trace, transitionConfig, -1);
+                } else {
+                    join.exit().remove();
                 }
             }
-        });
-};
+            if(showText) {
+                selection = s.selectAll('g');
 
-function selectMarkers(gd, plotinfo, cdscatter) {
+                join = selection
+                    .data(trace.marker.maxdisplayed ? visFilter : Lib.identity);
+
+                    // each text needs to go in its own 'g' in case
+                    // it gets converted to mathjax
+                join.enter().append('g')
+                    .append('text')
+                    .call(Drawing.translatePoints, xa, ya);
+
+                selection
+                    .call(Drawing.translatePoints, xa, ya);
+
+                join.exit().remove();
+            }
+        }
+    }
+
+    // NB: selectAll is evaluated on instantiation:
+    var pointSelection = tr.selectAll('.points');
+
+    // Join with new data
+    join = pointSelection.data([cdscatter]);
+
+    // Transition existing, but don't defer this to an async .transition since
+    // there's no timing involved:
+    pointSelection.each(makePoints);
+
+    join.enter().append('g')
+        .classed('points', true)
+        .each(makePoints);
+
+    join.exit().remove();
+}
+
+function selectMarkers(gd, idx, plotinfo, cdscatter, cdscatterAll) {
     var xa = plotinfo.x(),
         ya = plotinfo.y(),
         xr = d3.extent(xa.range.map(xa.l2c)),
         yr = d3.extent(ya.range.map(ya.l2c));
 
-    cdscatter.forEach(function(d, i) {
-        var trace = d[0].trace;
-        if(!subTypes.hasMarkers(trace)) return;
-        // if marker.maxdisplayed is used, select a maximum of
-        // mnum markers to show, from the set that are in the viewport
-        var mnum = trace.marker.maxdisplayed;
+    var trace = cdscatter[0].trace;
+    if(!subTypes.hasMarkers(trace)) return;
+    // if marker.maxdisplayed is used, select a maximum of
+    // mnum markers to show, from the set that are in the viewport
+    var mnum = trace.marker.maxdisplayed;
 
-        // TODO: remove some as we get away from the viewport?
-        if(mnum === 0) return;
+    // TODO: remove some as we get away from the viewport?
+    if(mnum === 0) return;
 
-        var cd = d.filter(function(v) {
-                return v.x >= xr[0] && v.x <= xr[1] && v.y >= yr[0] && v.y <= yr[1];
-            }),
-            inc = Math.ceil(cd.length / mnum),
-            tnum = 0;
-        cdscatter.forEach(function(cdj, j) {
-            var tracei = cdj[0].trace;
-            if(subTypes.hasMarkers(tracei) &&
-                    tracei.marker.maxdisplayed > 0 && j < i) {
-                tnum++;
-            }
-        });
+    var cd = cdscatter.filter(function(v) {
+            return v.x >= xr[0] && v.x <= xr[1] && v.y >= yr[0] && v.y <= yr[1];
+        }),
+        inc = Math.ceil(cd.length / mnum),
+        tnum = 0;
+    cdscatterAll.forEach(function(cdj, j) {
+        var tracei = cdj[0].trace;
+        if(subTypes.hasMarkers(tracei) &&
+                tracei.marker.maxdisplayed > 0 && j < idx) {
+            tnum++;
+        }
+    });
 
-        // if multiple traces use maxdisplayed, stagger which markers we
-        // display this formula offsets successive traces by 1/3 of the
-        // increment, adding an extra small amount after each triplet so
-        // it's not quite periodic
-        var i0 = Math.round(tnum * inc / 3 + Math.floor(tnum / 3) * inc / 7.1);
+    // if multiple traces use maxdisplayed, stagger which markers we
+    // display this formula offsets successive traces by 1/3 of the
+    // increment, adding an extra small amount after each triplet so
+    // it's not quite periodic
+    var i0 = Math.round(tnum * inc / 3 + Math.floor(tnum / 3) * inc / 7.1);
 
-        // for error bars: save in cd which markers to show
-        // so we don't have to repeat this
-        d.forEach(function(v) { delete v.vis; });
-        cd.forEach(function(v, i) {
-            if(Math.round((i + i0) % inc) === 0) v.vis = true;
-        });
+    // for error bars: save in cd which markers to show
+    // so we don't have to repeat this
+    cdscatter.forEach(function(v) { delete v.vis; });
+    cd.forEach(function(v, i) {
+        if(Math.round((i + i0) % inc) === 0) v.vis = true;
     });
 }
 
-},{"../../components/drawing":43,"../../components/errorbars":49,"../../lib":100,"../../lib/polygon":106,"./arrays_to_calcdata":175,"./line_points":188,"./subtypes":195,"d3":10}],193:[function(require,module,exports){
+},{"../../components/drawing":43,"../../components/errorbars":49,"../../lib":100,"../../lib/polygon":106,"./arrays_to_calcdata":176,"./line_points":189,"./link_traces":191,"./subtypes":197,"d3":8}],195:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -45967,7 +47386,8 @@ module.exports = function selectPoints(searchInfo, polygon) {
                     curveNumber: curveNumber,
                     pointNumber: i,
                     x: di.x,
-                    y: di.y
+                    y: di.y,
+                    identifier: di.identifier
                 });
                 di.dim = 0;
             }
@@ -45990,7 +47410,7 @@ module.exports = function selectPoints(searchInfo, polygon) {
     return selection;
 };
 
-},{"./subtypes":195}],194:[function(require,module,exports){
+},{"./subtypes":197}],196:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -46032,7 +47452,7 @@ module.exports = function style(gd) {
     s.call(ErrorBars.style);
 };
 
-},{"../../components/drawing":43,"../../components/errorbars":49,"d3":10}],195:[function(require,module,exports){
+},{"../../components/drawing":43,"../../components/errorbars":49,"d3":8}],197:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -46068,7 +47488,7 @@ module.exports = {
     }
 };
 
-},{"../../lib":100}],196:[function(require,module,exports){
+},{"../../lib":100}],198:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -46089,7 +47509,7 @@ module.exports = function(traceIn, traceOut, layout, coerce) {
     Lib.coerceFont(coerce, 'textfont', layout.font);
 };
 
-},{"../../lib":100}],197:[function(require,module,exports){
+},{"../../lib":100}],199:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -46134,7 +47554,7 @@ module.exports = function handleXYDefaults(traceIn, traceOut, coerce) {
     return len;
 };
 
-},{}],198:[function(require,module,exports){
+},{}],200:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -46209,7 +47629,7 @@ module.exports = {
     }
 };
 
-},{"../../components/colorscale/color_attributes":28,"../../lib/extend":97,"../../plots/attributes":120,"../scatter/attributes":176}],199:[function(require,module,exports){
+},{"../../components/colorscale/color_attributes":28,"../../lib/extend":97,"../../plots/attributes":120,"../scatter/attributes":177}],201:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -46232,7 +47652,7 @@ module.exports = function calc(gd, trace) {
     return cd;
 };
 
-},{"../scatter/colorscale_calc":180}],200:[function(require,module,exports){
+},{"../scatter/colorscale_calc":181}],202:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -46305,7 +47725,7 @@ function handleLonLatLocDefaults(traceIn, traceOut, coerce) {
     return len;
 }
 
-},{"../../lib":100,"../scatter/line_defaults":187,"../scatter/marker_defaults":191,"../scatter/subtypes":195,"../scatter/text_defaults":196,"./attributes":198}],201:[function(require,module,exports){
+},{"../../lib":100,"../scatter/line_defaults":188,"../scatter/marker_defaults":193,"../scatter/subtypes":197,"../scatter/text_defaults":198,"./attributes":200}],203:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -46336,7 +47756,7 @@ ScatterGeo.meta = {
 
 module.exports = ScatterGeo;
 
-},{"../../plots/geo":143,"../scatter/colorbar":179,"./attributes":198,"./calc":199,"./defaults":200,"./plot":202}],202:[function(require,module,exports){
+},{"../../plots/geo":144,"../scatter/colorbar":180,"./attributes":200,"./calc":201,"./defaults":202,"./plot":204}],204:[function(require,module,exports){
 /**
 * Copyright 2012-2016, Plotly, Inc.
 * All rights reserved.
@@ -46636,5 +48056,5 @@ function makeEventDataFunc(trace) {
     };
 }
 
-},{"../../components/color":20,"../../components/drawing":43,"../../lib/array_to_calc_item":93,"../../lib/geo_location_utils":99,"../../lib/topojson_utils":112,"../../plots/cartesian/axes":122,"../../plots/cartesian/graph_interact":129,"../scatter/subtypes":195,"./attributes":198,"d3":10}]},{},[5])(5)
+},{"../../components/color":20,"../../components/drawing":43,"../../lib/array_to_calc_item":93,"../../lib/geo_location_utils":99,"../../lib/topojson_utils":112,"../../plots/cartesian/axes":122,"../../plots/cartesian/graph_interact":129,"../scatter/subtypes":197,"./attributes":200,"d3":8}]},{},[5])(5)
 });
